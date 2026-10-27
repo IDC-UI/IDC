@@ -1,0 +1,7 @@
+project_id = "idc"
+
+[functions.secure-upload]
+verify_jwt = true
+
+[functions.secure-vault]
+verify_jwt = true

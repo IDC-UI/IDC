@@ -3,13 +3,13 @@
 var b64=function(u){return btoa(String.fromCharCode.apply(null,u)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
 var ub64=function(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})};
 var enc=new TextEncoder(),dec=new TextDecoder();
-/* ---- تشفير AES-GCM (المفتاح مابيسيبش جهاز المستخدم / الكارت) ---- */
+/* ---- تشفير بطاقة الطوارئ AES-256-GCM؛ المفتاح موجود في جزء الرابط بعد # ---- */
 window.IDCrypto={
- async newKey(){return crypto.getRandomValues(new Uint8Array(16))},
+ async newKey(){return crypto.getRandomValues(new Uint8Array(32))},
  async _k(raw){return crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])},
  async enc(obj,raw){var iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},await this._k(raw),enc.encode(JSON.stringify(obj))));var o=new Uint8Array(12+ct.length);o.set(iv);o.set(ct,12);return b64(o)},
  async dec(s,raw){var o=ub64(s);return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:o.slice(0,12)},await this._k(raw),o.slice(12))))},
- async fromPass(p,salt){var m=await crypto.subtle.importKey('raw',enc.encode(p),'PBKDF2',false,['deriveBits']);return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},m,128))}
+ async fromPass(p,salt){var m=await crypto.subtle.importKey('raw',enc.encode(p),'PBKDF2',false,['deriveBits']);return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},m,256))}
 };
 /* ---- وضع الطوارئ: بيفتح من غير بصمة ولا باسورد ---- */
 var EM=null,emErr='';
