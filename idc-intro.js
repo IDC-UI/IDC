@@ -27,11 +27,7 @@
   var originalRender = window.R;
 
   function iconMarkup() {
-    return '<svg viewBox="0 0 512 512" role="img" aria-label="IDC digital identity card">' +
-      '<defs><filter id="idc-intro-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#34409b" flood-opacity=".22"/></filter></defs>' +
-      '<g transform="rotate(4 255 165)"><g class="idc-intro-card"><g class="idc-intro-float"><rect x="120" y="85" width="272" height="160" rx="14" fill="var(--intro-navy)" filter="url(#idc-intro-shadow)"/><g class="idc-intro-pop" style="animation-delay:.9s"><circle cx="176" cy="127" r="15" fill="none" stroke="var(--intro-soft)" stroke-width="9"/></g><path class="idc-intro-pop" style="animation-delay:1s" d="M143 180a33 33 0 0 1 66 0z" fill="var(--intro-soft)"/><rect class="idc-intro-bar" style="animation-delay:1.1s" x="246" y="117" width="122" height="20" rx="10" fill="#fff"/><rect class="idc-intro-bar" style="animation-delay:1.25s" x="240" y="148" width="82" height="14" rx="7" fill="var(--intro-soft)"/><rect class="idc-intro-bar" style="animation-delay:1.4s" x="133" y="195" width="222" height="14" rx="7" fill="var(--intro-soft)"/></g></g></g>' +
-      '<g><path class="idc-intro-arc" style="animation-delay:1.8s" d="M416.9 222.2A24 24 0 0 1 416.9 251.8"/><path class="idc-intro-arc" style="animation-delay:2s" d="M434.2 208.7A46 46 0 0 1 434.2 265.3"/><path class="idc-intro-arc" style="animation-delay:2.2s" d="M451.6 195.1A68 68 0 0 1 451.6 278.9"/></g>' +
-      '<g fill="var(--intro-navy)" font-size="104" font-weight="800" text-anchor="middle" font-family="Cairo,system-ui,sans-serif"><text class="idc-intro-letter" style="animation-delay:1.5s" x="178" y="438">I</text><text class="idc-intro-letter" style="animation-delay:1.65s" x="256" y="438">D</text><text class="idc-intro-letter" style="animation-delay:1.8s" x="338" y="438">C</text></g></svg>';
+    return '<img class="idc-intro-logo" src="icon-512.png" alt="IDC">';
   }
 
   function markup() {

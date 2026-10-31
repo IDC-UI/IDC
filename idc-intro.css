@@ -2,19 +2,8 @@
 @media(prefers-color-scheme:dark){.idc-intro{--intro-bg:#1c2150;--intro-bg2:#10133a;--intro-navy:#aab2f5;--intro-soft:#aab2f5;--intro-wave:#c9ceff}}
 .idc-intro *{box-sizing:border-box}
 .idc-intro-stage{width:min(86vw,47vh,440px);aspect-ratio:1;flex:none}
-.idc-intro-stage svg{width:100%;height:100%;display:block;overflow:visible}
-.idc-intro-card{transform-box:fill-box;transform-origin:center;opacity:0;animation:idcCardIn 1.1s cubic-bezier(.2,.8,.2,1) .2s forwards}
-.idc-intro-float{animation:idcFloat 5s ease-in-out 1.6s infinite}
-.idc-intro-pop{transform-box:fill-box;transform-origin:center;opacity:0;animation:idcPop .6s cubic-bezier(.2,.9,.3,1.2) forwards}
-.idc-intro-bar{transform-box:fill-box;transform-origin:left center;transform:scaleX(0);animation:idcGrow .7s cubic-bezier(.3,.8,.2,1) forwards}
-.idc-intro-arc{fill:none;stroke:var(--intro-wave);stroke-width:5;stroke-linecap:round;opacity:0;animation:idcArc 2.4s ease-in-out infinite}
-.idc-intro-letter{opacity:0;transform:translateY(22px);animation:idcRise .8s cubic-bezier(.2,.8,.2,1) forwards}
-@keyframes idcCardIn{from{opacity:0;transform:translateY(40px) rotate(-8deg) scale(.92)}to{opacity:1;transform:none}}
-@keyframes idcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes idcPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
-@keyframes idcGrow{to{transform:scaleX(1)}}
-@keyframes idcArc{0%{opacity:0}25%,60%{opacity:1}100%{opacity:0}}
-@keyframes idcRise{to{opacity:1;transform:none}}
+.idc-intro-logo{width:100%;height:100%;display:block;object-fit:contain;opacity:0;transform:scale(.94);animation:idcLogoIn .9s cubic-bezier(.2,.8,.2,1) .2s forwards;filter:drop-shadow(0 12px 24px rgba(52,64,155,.2))}
+@keyframes idcLogoIn{to{opacity:1;transform:scale(1)}}
 @keyframes idcTagIn{to{opacity:1;transform:none}}
 @keyframes idcActionsIn{to{opacity:1;transform:none}}
 .idc-intro-tag{width:min(88vw,440px);text-align:center;opacity:0;transform:translateY(10px);animation:idcTagIn 1s ease-out 2.4s forwards}
@@ -33,4 +22,4 @@
 .idc-intro .replay{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));inset-inline-start:14px;min-height:40px;padding:6px 12px}
 .idc-intro button:focus-visible{outline:3px solid var(--intro-soft);outline-offset:3px}
 @media(max-height:650px){.idc-intro{gap:4px;padding-top:8px}.idc-intro-stage{width:min(64vw,38vh,330px)}.idc-intro-tag p{margin-bottom:4px}.idc-intro-actions{margin-top:2px}}
-@media(prefers-reduced-motion:reduce){.idc-intro *{animation-duration:.01ms!important;animation-delay:0ms!important;animation-iteration-count:1!important}.idc-intro-arc{opacity:1}}
+@media(prefers-reduced-motion:reduce){.idc-intro *{animation-duration:.01ms!important;animation-delay:0ms!important;animation-iteration-count:1!important}}
