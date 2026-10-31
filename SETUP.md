@@ -19,7 +19,7 @@ supabase functions deploy secure-vault
 
 ## 2. نشر GitHub Pages
 
-من إعدادات المستودع، اختاري النشر من فرع `main` ومجلد الجذر. الملفات الثابتة المطلوبة: `index.html` و`idc-plus.js` و`idc-supabase.js` و`supabase-config.js` و`manifest.json` و`sw.js` والأيقونتان. مجلد `supabase/` يُنشر إلى Supabase عبر CLI، وليس كصفحات GitHub.
+من إعدادات المستودع، اختاري النشر من فرع `main` ومجلد الجذر. الملفات الثابتة المطلوبة: `index.html` و`idc-plus.js` و`idc-intro.js` و`idc-intro.css` و`idc-supabase.js` و`supabase-config.js` و`manifest.json` و`sw.js` وأيقونات PNG. مجلد `supabase/` يُنشر إلى Supabase عبر CLI، وليس كصفحات GitHub.
 
 ## الحماية والملفات
 

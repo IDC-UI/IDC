@@ -1,0 +1,36 @@
+.idc-intro{--intro-bg:#f4f5ff;--intro-bg2:#dcdffd;--intro-navy:#34409b;--intro-soft:#a9b0e8;--intro-wave:#fff;position:fixed;inset:0;z-index:1000;box-sizing:border-box;padding:calc(16px + env(safe-area-inset-top,0px)) 18px calc(22px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,var(--intro-bg),var(--intro-bg2));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:auto;color:var(--intro-navy);font-family:Cairo,system-ui,sans-serif}
+@media(prefers-color-scheme:dark){.idc-intro{--intro-bg:#1c2150;--intro-bg2:#10133a;--intro-navy:#aab2f5;--intro-soft:#aab2f5;--intro-wave:#c9ceff}}
+.idc-intro *{box-sizing:border-box}
+.idc-intro-stage{width:min(86vw,47vh,440px);aspect-ratio:1;flex:none}
+.idc-intro-stage svg{width:100%;height:100%;display:block;overflow:visible}
+.idc-intro-card{transform-box:fill-box;transform-origin:center;opacity:0;animation:idcCardIn 1.1s cubic-bezier(.2,.8,.2,1) .2s forwards}
+.idc-intro-float{animation:idcFloat 5s ease-in-out 1.6s infinite}
+.idc-intro-pop{transform-box:fill-box;transform-origin:center;opacity:0;animation:idcPop .6s cubic-bezier(.2,.9,.3,1.2) forwards}
+.idc-intro-bar{transform-box:fill-box;transform-origin:left center;transform:scaleX(0);animation:idcGrow .7s cubic-bezier(.3,.8,.2,1) forwards}
+.idc-intro-arc{fill:none;stroke:var(--intro-wave);stroke-width:5;stroke-linecap:round;opacity:0;animation:idcArc 2.4s ease-in-out infinite}
+.idc-intro-letter{opacity:0;transform:translateY(22px);animation:idcRise .8s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes idcCardIn{from{opacity:0;transform:translateY(40px) rotate(-8deg) scale(.92)}to{opacity:1;transform:none}}
+@keyframes idcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes idcPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes idcGrow{to{transform:scaleX(1)}}
+@keyframes idcArc{0%{opacity:0}25%,60%{opacity:1}100%{opacity:0}}
+@keyframes idcRise{to{opacity:1;transform:none}}
+@keyframes idcTagIn{to{opacity:1;transform:none}}
+@keyframes idcActionsIn{to{opacity:1;transform:none}}
+.idc-intro-tag{width:min(88vw,440px);text-align:center;opacity:0;transform:translateY(10px);animation:idcTagIn 1s ease-out 2.4s forwards}
+.idc-intro-tag p{margin:0 0 8px;line-height:1.55}
+.idc-intro-tag p:last-child{margin-bottom:0}
+.idc-intro-en{display:block;font:600 16px/1.45 Cairo,system-ui,sans-serif;direction:ltr}
+.idc-intro-ar{display:block;font:600 18px/1.55 Cairo,system-ui,sans-serif;direction:rtl}
+.idc-intro[data-ui="ar"] .idc-intro-en,.idc-intro[data-ui="en"] .idc-intro-ar{display:none}
+.idc-intro-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:min(100%,440px);margin-top:8px;opacity:0;transform:translateY(8px);animation:idcActionsIn .7s ease-out 2.8s forwards}
+.idc-intro button{position:static;inset:auto;translate:none;border:1px solid var(--intro-navy);border-radius:14px;padding:10px 18px;min-height:44px;background:var(--intro-navy);color:#fff;font:700 14px Cairo,system-ui,sans-serif;cursor:pointer}
+.idc-intro .secondary{background:transparent;color:var(--intro-navy)}
+.idc-intro .preview,.idc-intro .replay,.idc-intro .language button{border:0;background:transparent;color:var(--intro-navy);font-weight:500}
+.idc-intro .language{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));inset-inline-end:14px;display:flex;gap:2px;padding:3px;border:1px solid color-mix(in srgb,var(--intro-navy) 25%,transparent);border-radius:12px;background:color-mix(in srgb,var(--intro-bg) 80%,transparent)}
+.idc-intro .language button{min-height:34px;padding:4px 10px;border-radius:9px}
+.idc-intro .language button[aria-pressed="true"]{background:var(--intro-navy);color:#fff}
+.idc-intro .replay{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));inset-inline-start:14px;min-height:40px;padding:6px 12px}
+.idc-intro button:focus-visible{outline:3px solid var(--intro-soft);outline-offset:3px}
+@media(max-height:650px){.idc-intro{gap:4px;padding-top:8px}.idc-intro-stage{width:min(64vw,38vh,330px)}.idc-intro-tag p{margin-bottom:4px}.idc-intro-actions{margin-top:2px}}
+@media(prefers-reduced-motion:reduce){.idc-intro *{animation-duration:.01ms!important;animation-delay:0ms!important;animation-iteration-count:1!important}.idc-intro-arc{opacity:1}}

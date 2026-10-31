@@ -11,6 +11,8 @@ The next step is a GitHub Pages frontend connected to Supabase. The repository n
 ## Features
 
 - Arabic RTL interface with an English display option.
+- Animated first-visit welcome in Arabic or English, with signup, sign-in, and sample-preview paths.
+- The intro follows the saved language choice or device language, with an on-screen Arabic/English toggle.
 - PWA manifest, offline shell, and install prompt for mobile devices.
 - Image attachment preview, PDF download, and emergency-card QR.
 - Supabase email/password signup, email confirmation, sign-in, and password recovery.
@@ -70,6 +72,7 @@ Do not store real personal data until a Supabase project is configured, the migr
 
 - [`index.html`](index.html): app UI, onboarding, profile, wallet, and browser validation.
 - [`idc-plus.js`](idc-plus.js): emergency-card encryption, QR, image preview, and PWA installation.
+- [`idc-intro.js`](idc-intro.js) and [`idc-intro.css`](idc-intro.css): first-visit welcome animation and language selection.
 - [`idc-supabase.js`](idc-supabase.js): Supabase Auth, encrypted vault lifecycle, and encrypted attachment handling.
 - [`supabase/migrations/20261027000000_idc_vault.sql`](supabase/migrations/20261027000000_idc_vault.sql): vault table, private bucket, grants, and RLS policies.
 - [`supabase/functions/secure-vault/index.ts`](supabase/functions/secure-vault/index.ts): authenticated server-side vault payload validation and persistence.
