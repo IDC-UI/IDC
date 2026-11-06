@@ -499,6 +499,52 @@
   }
 
   document.addEventListener("click", resetIdleLock);
+  window.psave = async function () {
+    if (!currentUser || !vaultKey) return setError("سجّلي الدخول لفتح المحفظة قبل حفظ بياناتك.");
+    var profile = {
+      n: v("n"),
+      nid: v("nid"),
+      bd: v("bd"),
+      ph: v("ph"),
+      ct: v("ct"),
+      role: v("rl") || "student"
+    };
+    if (!profile.n || profile.n.length > 100) {
+      err = "اكتبي اسمًا صحيحًا لا يتجاوز 100 حرف.";
+      var nameError = document.querySelector("#app .err");
+      if (nameError) nameError.textContent = err;
+      return;
+    }
+
+    var previousProfile = S.p;
+    var previousItems = S.items;
+    var previousOwner = S.pOwner;
+    S.p = profile;
+    S.pOwner = currentUser.id;
+    if (profile.nid && !S.items.some(function (item) { return item.type === "id"; })) {
+      S.items = S.items.concat([mk("off", "public", "id", "بطاقة الهوية", profile.nid, "")]);
+    }
+    err = "";
+
+    try {
+      await persistVault();
+    } catch (error) {
+      S.p = previousProfile;
+      S.items = previousItems;
+      S.pOwner = previousOwner;
+      err = "لم يتم حفظ البيانات على الخادم. تحققي من الاتصال وإعداد secure-vault ثم حاولي مرة أخرى.";
+      var saveError = document.querySelector("#app .err");
+      if (saveError) saveError.textContent = err;
+      return;
+    }
+
+    S.screen = "setup";
+    S.nav = "home";
+    err = "";
+    R();
+    resetIdleLock();
+  };
+
   if (client) client.auth.onAuthStateChange(function (event) {
     if (event === "PASSWORD_RECOVERY") {
       recoveryPending = true;

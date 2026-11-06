@@ -27,7 +27,7 @@
   var originalRender = window.R;
 
   function iconMarkup() {
-    return '<img class="idc-intro-logo" src="icon-512.png" alt="IDC">';
+    return '<img class="idc-intro-logo" src="icon-512.png" alt="IDC official app icon">';
   }
 
   function markup() {
