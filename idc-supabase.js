@@ -357,7 +357,6 @@
   }
 
   window.doSu = async function () {
-    if (!backendRequired()) return;
     var name = v("nm");
     var email = v("em").toLowerCase();
     var password = v("pw");
@@ -372,25 +371,27 @@
 
     err = "";
     var supaUser = null;
-    try {
-      var result = await client.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: { display_name: name },
-          emailRedirectTo: window.location.origin + window.location.pathname
+    if (client) {
+      try {
+        var result = await client.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: { display_name: name },
+            emailRedirectTo: window.location.origin + window.location.pathname
+          }
+        });
+        if (result.error) {
+          var msg = String(result.error.message || "");
+          if (/already registered|user already registered/i.test(msg)) {
+            return setError("هذا البريد مسجل بالفعل. سجّلي الدخول.");
+          }
+          // If Supabase hits email rate limit or requires confirmation, still provision local E2E vault so user can enter immediately
+        } else if (result.data && result.data.user) {
+          supaUser = result.data.user;
         }
-      });
-      if (result.error) {
-        var msg = String(result.error.message || "");
-        if (/already registered|user already registered/i.test(msg)) {
-          return setError("هذا البريد مسجل بالفعل. سجّلي الدخول.");
-        }
-        // If Supabase hits email rate limit or requires confirmation, still provision local E2E vault so user can enter immediately
-      } else if (result.data && result.data.user) {
-        supaUser = result.data.user;
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
     if (!supaUser) {
       supaUser = {
@@ -411,23 +412,27 @@
   };
 
   window.doLogin = async function () {
-    if (!backendRequired()) return;
     var email = v("lg").toLowerCase();
     var password = v("lp");
     if (!emailValid(email) || !password) return setError("اكتبي بريدًا صحيحًا وكلمة المرور.");
 
     err = "";
-    var result = await client.auth.signInWithPassword({ email: email, password: password });
-    if (!result.error && result.data && result.data.user) {
+    var result = null;
+    if (client) {
       try {
-        await loadVault(password, result.data.user, false);
-        return;
-      } catch (error) {
-        vaultKey = null;
-        currentUser = null;
-        await client.auth.signOut();
-        return setError("كلمة المرور لا تطابق المحفظة المشفرة لهذا الحساب.");
-      }
+        result = await client.auth.signInWithPassword({ email: email, password: password });
+        if (!result.error && result.data && result.data.user) {
+          try {
+            await loadVault(password, result.data.user, false);
+            return;
+          } catch (error) {
+            vaultKey = null;
+            currentUser = null;
+            await client.auth.signOut();
+            return setError("كلمة المرور لا تطابق المحفظة المشفرة لهذا الحساب.");
+          }
+        }
+      } catch (e) {}
     }
 
     // Fallback to local encrypted vault on this device (e.g., created before email confirmation or while offline)
@@ -454,7 +459,7 @@
       }
     }
 
-    return setError(appError(result.error));
+    return setError(result && result.error ? appError(result.error) : "البريد أو كلمة المرور غير صحيحة.");
   };
 
   window.doF1 = async function () {
@@ -594,9 +599,9 @@
     var file = input.files && input.files[0];
     if (!file) return;
     if (S.preview) return localPickAtt(input);
-    if (!client) {
+    if (!currentUser || !vaultKey) {
       input.value = "";
-      return tst("أضيفي إعداد Supabase قبل حفظ أي ملفات حقيقية.");
+      return tst("سجّلي الدخول أولًا قبل رفع المرفقات.");
     }
     try {
       var attachment = await encryptFile(file);
