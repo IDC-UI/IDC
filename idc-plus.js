@@ -25,19 +25,40 @@ function emView(){
  return '<div class="ac" style="margin-top:12px"><div style="color:var(--rd);text-align:center">'+mi('emergency',44)+'</div><h2 style="text-align:center;font-size:22px;margin:6px 0 14px">معلومات الطوارئ</h2>'+r+call+'</div><div class="mu" style="text-align:center;font-size:12px;margin-top:12px">البيانات دي معروضة من غير تسجيل دخول لأن صاحبها اختار كده.</div>'}
 var _R=R;R=function(){if(hashP()){document.getElementById('app').innerHTML=emView();return}_R()};
 window.addEventListener('hashchange',function(){EM=null;loadEm()});
-/* ---- صفحة إعداد بطاقة الطوارئ ---- */
-var emSample=false,emLink='';
+/* ---- صفحة إعداد وعرض بطاقة الطوارئ ---- */
+var emSample=false,emLink='',emEdit=false;
 var _hH=hHome;hHome=function(){return _hH()+'<div class="cd it" style="cursor:pointer;margin-top:12px;--c:var(--rd)" onclick="pg={k:\'emerg\'};emLink=\'\';R()"><div class="ic">'+mi('emergency')+'</div><div class="g"><b style="font-weight:600">بطاقة الطوارئ</b><div class="mu" style="font-size:12px">بيانات تتفتح من غير باسورد لو حصل طارئ</div></div></div>'};
 var _pg=page;page=function(){return pg.k=='emerg'?emPage():_pg()};
+function hasEmData(d){return Boolean(d&&F.some(function(f){return d[f[0]]&&String(d[f[0]]).trim()}))}
 function emPage(){
  var d=emSample?SAMPLE:(S.em||{});
+ var ready=hasEmData(S.em);
+ if(ready&&!emEdit&&!emSample){
+  var rows=F.map(function(f){return d[f[0]]?'<div class="rw"><span class="mu">'+f[1]+'</span><b dir="auto" style="font-weight:600">'+esc(d[f[0]])+'</b></div>':''}).join('');
+  var call=d.c2?'<a class="bt w" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin-top:16px;height:48px;background:#b42318;color:#fff" href="tel:'+esc(d.c2)+'">'+mi('call')+' اتصال فوري بـ '+esc(d.c1||'جهة الطوارئ')+' ('+esc(d.c2)+')</a>':'';
+  return pgh('بطاقة الطوارئ')
+   +'<div class="cd" style="border:1.5px solid rgba(212,80,106,.35);margin-top:4px">'
+   +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="ic" style="--c:#b42318">'+mi('emergency')+'</div><div class="g"><b style="font-size:17px;font-weight:700">بيانات الطوارئ السريعة</b><div class="mu" style="font-size:12px">متاحة بدون كلمة مرور لمساعدتك في الحالات الطارئة</div></div></div>'
+   +rows+call+'</div>'
+   +'<div class="ar" style="margin-top:14px;gap:8px"><button class="bt o" style="flex:1" onclick="emEdit=true;R()">'+mi('edit')+' تعديل البيانات</button><button class="bt" style="flex:1" onclick="emMakeFromSaved()">إنشاء رابط و QR</button></div>'
+   +(emLink?'<div class="cd" style="margin-top:16px;text-align:center"><div id="emqr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px"></div><div class="mu" dir="ltr" style="font-size:11px;word-break:break-all;margin:10px 0">'+esc(emLink)+'</div><button class="bt o" onclick="emCopy()">نسخ الرابط</button><div class="mu" style="font-size:12px;margin-top:10px">البيانات متشفّرة جوه الرابط نفسه، والمفتاح موجود في الجزء اللي بعد # ومابيروحش لأي سيرفر.</div></div>':'');
+ }
  var fs=F.map(function(f){return fld('em_'+f[0],f[1],{v:d[f[0]]||''})}).join('');
- return pgh('بطاقة الطوارئ')+'<div class="nt" style="margin-top:0">اختاري إنتي بس البيانات اللي عايزاها تظهر لأي حد يفتح الكارت. باقي بياناتك بتفضل مقفولة.</div>'
+ return pgh('بطاقة الطوارئ')+'<div class="nt" style="margin-top:0">اكتبي البيانات اللي عايزاها تظهر لأي حد يفتح قسم الطوارئ لو حصل لكِ حاجة. باقي بياناتك الخاصة بتفضل مقفولة.</div>'
  +(emSample?'<div class="nt" style="color:var(--bl)">ده نموذج ببيانات تجريبية للمعاينة. دوسي «بياناتي أنا» وادخلي بياناتك الحقيقية.</div>':'')
- +fs+'<div class="ar"><button class="bt o" onclick="emSample=!emSample;R()">'+(emSample?'بياناتي أنا':'معاينة بنموذج')+'</button><button class="bt" onclick="emMake()">إنشاء الرابط و QR</button></div>'
+ +fs+'<div class="ar" style="gap:8px;flex-wrap:wrap"><button class="bt o" onclick="emSample=!emSample;R()">'+(emSample?'بياناتي أنا':'معاينة بنموذج')+'</button>'+(ready?'<button class="bt t" onclick="emEdit=false;emSample=false;R()">إلغاء</button>':'')+'<button class="bt" onclick="emSaveOnly()">حفظ بيانات الطوارئ</button><button class="bt o" onclick="emMake()">حفظ + QR</button></div>'
  +(emLink?'<div class="cd" style="margin-top:16px;text-align:center"><div id="emqr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px"></div><div class="mu" dir="ltr" style="font-size:11px;word-break:break-all;margin:10px 0">'+esc(emLink)+'</div><button class="bt o" onclick="emCopy()">نسخ الرابط</button><div class="mu" style="font-size:12px;margin-top:10px">البيانات متشفّرة جوه الرابط نفسه، والمفتاح موجود في الجزء اللي بعد # ومابيروحش لأي سيرفر ولا لجيت هاب.</div></div>':'');
 }
-window.emMake=async function(){var o={};F.forEach(function(f){o[f[0]]=v('em_'+f[0])});if(!emSample){S.em=o;sv()}var k=await IDCrypto.newKey(),c=await IDCrypto.enc(o,k);emLink=location.origin+location.pathname+'#e='+c+'&k='+b64(k);R();setTimeout(function(){var e=document.getElementById('emqr');if(e&&window.qrcode){var q=qrcode(0,'M');q.addData(emLink);q.make();e.innerHTML=q.createSvgTag(4)}else if(e)e.textContent='QR محتاج إنترنت أول مرة'},50)};
+window.emSaveOnly=function(){
+ var o={};F.forEach(function(f){o[f[0]]=v('em_'+f[0])});
+ S.em=o;emSample=false;emEdit=false;sv();R();tst('تم حفظ بيانات الطوارئ');
+};
+window.emMakeFromSaved=async function(){
+ var o=S.em||{};
+ var k=await IDCrypto.newKey(),c=await IDCrypto.enc(o,k);emLink=location.origin+location.pathname+'#e='+c+'&k='+b64(k);R();
+ setTimeout(function(){var e=document.getElementById('emqr');if(e&&window.qrcode){var q=qrcode(0,'M');q.addData(emLink);q.make();e.innerHTML=q.createSvgTag(4)}else if(e)e.textContent='QR محتاج إنترنت أول مرة'},50);
+};
+window.emMake=async function(){var o={};F.forEach(function(f){o[f[0]]=v('em_'+f[0])});if(!emSample){S.em=o;emEdit=false;sv()}var k=await IDCrypto.newKey(),c=await IDCrypto.enc(o,k);emLink=location.origin+location.pathname+'#e='+c+'&k='+b64(k);R();setTimeout(function(){var e=document.getElementById('emqr');if(e&&window.qrcode){var q=qrcode(0,'M');q.addData(emLink);q.make();e.innerHTML=q.createSvgTag(4)}else if(e)e.textContent='QR محتاج إنترنت أول مرة'},50)};
 window.emCopy=function(){navigator.clipboard&&navigator.clipboard.writeText(emLink).then(function(){tst('اتنسخ')})};
 /* ---- عارض الصور: بيفتح + ملخص تفاصيل الصورة على الجهاز ---- */
 window.vw=function(id){var i=S.items.filter(function(x){return x.id==id})[0];if(!i||!i.att)return;

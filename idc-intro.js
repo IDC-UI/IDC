@@ -9,7 +9,7 @@
   var seen = false;
 
   try {
-    seen = localStorage.getItem(SEEN_KEY) === "1";
+    seen = localStorage.getItem(SEEN_KEY) === "1" || Boolean(localStorage.getItem("idc_active_session_v2"));
   } catch (error) {
     try { seen = sessionStorage.getItem(SEEN_KEY) === "1"; } catch (ignored) {}
   }
