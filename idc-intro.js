@@ -3,9 +3,10 @@
 
   var SEEN_KEY = "idc_intro_seen_v1";
   var LANGUAGE_KEY = "idc_intro_language";
-  var authReturn = new URLSearchParams(location.search).has("code") ||
+  var searchParams = new URLSearchParams(location.search);
+  var authReturn = searchParams.has("code") ||
     /access_token=|type=recovery|error_description=/.test(location.hash);
-  var emergencyCard = /^#e=/.test(location.hash);
+  var emergencyCard = /^#(e|c)=/.test(location.hash) || searchParams.has("id") || searchParams.has("c");
   var seen = false;
 
   try {
