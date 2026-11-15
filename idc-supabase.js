@@ -156,8 +156,109 @@
     };
   }
 
+  var PUBLIC_EM_KEY = "idc_public_em_v1";
+  var outerLockTab = "unlock";
+
+  function syncPublicEmergencyCache(emObj, pObj) {
+    try {
+      var em = emObj || (typeof S !== "undefined" && S.em);
+      var p = pObj || (typeof S !== "undefined" && S.p);
+      if (!em && (!p || !p.ph)) return;
+      var safeEm = {
+        n: String((em && em.n) || (p && p.n) || "").slice(0, 120),
+        bt: String((em && em.bt) || "").slice(0, 20),
+        al: String((em && em.al) || "").slice(0, 300),
+        ch: String((em && em.ch) || "").slice(0, 300),
+        md: String((em && em.md) || "").slice(0, 300),
+        c1: String((em && em.c1) || "").slice(0, 120),
+        c2: String((em && em.c2) || (p && p.ph) || "").slice(0, 40),
+        nt: String((em && em.nt) || "").slice(0, 500)
+      };
+      if (safeEm.bt || safeEm.al || safeEm.ch || safeEm.md || safeEm.c1 || safeEm.c2 || safeEm.nt) {
+        localStorage.setItem(PUBLIC_EM_KEY, JSON.stringify(safeEm));
+      }
+    } catch (e) {}
+  }
+
+  function loadPublicEmergencyCache() {
+    try {
+      var raw = localStorage.getItem(PUBLIC_EM_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    if (typeof S !== "undefined" && S.em) return S.em;
+    return null;
+  }
+
+  window.idcSetOuterTab = function (tab) {
+    outerLockTab = tab === "emerg" ? "emerg" : "unlock";
+    err = "";
+    R();
+  };
+
+  window.idcGetOuterTab = function () {
+    return outerLockTab;
+  };
+
+  window.idcOuterEmergencyCardHtml = function () {
+    var d = loadPublicEmergencyCache();
+    var isEn = typeof S !== "undefined" && S.lang === "en";
+    if (!d || (!d.bt && !d.al && !d.ch && !d.md && !d.c1 && !d.c2 && !d.nt)) {
+      return '<div class="cd" style="border:1.5px solid rgba(212,80,106,.45);margin-top:12px;text-align:center;padding:18px 14px">' +
+        '<div class="ic" style="--c:#b42318;margin:0 auto 10px">' + mi("emergency", 28) + '</div>' +
+        '<b style="font-size:16px;display:block">' + (isEn ? "Emergency Mode (No Password Required)" : "وضع الطوارئ (بدون باسورد)") + '</b>' +
+        '<div class="mu" style="font-size:13px;margin-top:6px;line-height:1.7">' +
+          (isEn
+            ? "Once the account owner fills their emergency details inside the app, they appear here automatically for responders without needing a password."
+            : "بمجرد ما صاحب الحساب يسجّل بيانات الطوارئ من جوه التطبيق، بتظهر هنا تلقائيًا لأي مسعف بدون باسورد.") +
+        '</div>' +
+        '<a class="bt w" style="margin-top:12px;background:#b42318;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:123">' +
+          mi("call") + " " + (isEn ? "Call Ambulance (123)" : "اتصال بالإسعاف (123)") +
+        '</a></div>';
+    }
+    var fields = [
+      ["n", isEn ? "Name" : "الاسم", "person"],
+      ["bt", isEn ? "Blood Type" : "فصيلة الدم", "bloodtype"],
+      ["al", isEn ? "Allergies" : "حساسية خطيرة", "warning"],
+      ["ch", isEn ? "Chronic Conditions" : "أمراض مزمنة", "medical_information"],
+      ["md", isEn ? "Current Medications" : "أدوية حالية", "medication"],
+      ["c1", isEn ? "Emergency Contact" : "شخص للاتصال في الطوارئ", "contact_phone"],
+      ["c2", isEn ? "Emergency Phone" : "موبايل الطوارئ", "call"],
+      ["nt", isEn ? "Notes for Responder" : "ملاحظات للمسعف", "notes"]
+    ];
+    var rows = fields.map(function (f) {
+      var val = d[f[0]];
+      if (!val) return "";
+      return '<div class="rw" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><div class="ic" style="--c:#b42318;width:32px;height:32px">' + mi(f[2], 18) + '</div><span class="mu">' + f[1] + '</span></div><b dir="auto" style="font-weight:700;text-align:end">' + esc(val) + '</b></div>';
+    }).join("");
+    var callBtn = d.c2
+      ? '<a class="bt w" style="margin-top:12px;background:#b42318;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:' + esc(d.c2) + '">' +
+          mi("call") + " " + (isEn ? "Call Emergency Contact: " : "اتصال فوري بـ ") + esc(d.c1 || (isEn ? "Emergency Contact" : "جهة الطوارئ")) + " (" + esc(d.c2) + ")</a>"
+      : "";
+    return '<div class="cd" style="border:1.5px solid rgba(212,80,106,.5);margin-top:12px;text-align:start">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="ic" style="--c:#b42318">' + mi("emergency") + '</div><div class="g"><b style="font-size:16px;font-weight:700">' + (isEn ? "Emergency Responder Data" : "بيانات الطوارئ للمسعفين") + '</b><div class="mu" style="font-size:11.5px">' + (isEn ? "Open without password to assist the user" : "مفتوحة من برا بدون باسورد لمساعدة صاحب الحساب فورًا") + '</div></div></div>' +
+      rows + callBtn + '</div>';
+  };
+
+  window.idcOuterPartitionsBarHtml = function () {
+    var isEn = typeof S !== "undefined" && S.lang === "en";
+    var isEm = outerLockTab === "emerg";
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 12px">' +
+      '<div class="cd" role="button" tabindex="0" onclick="window.idcSetOuterTab(\'unlock\')" style="margin:0;padding:12px;cursor:pointer;border:2px solid ' + (!isEm ? "var(--bl)" : "var(--ln)") + ';background:' + (!isEm ? "color-mix(in srgb,var(--bl) 12%,var(--cd))" : "var(--cd)") + '">' +
+        '<div class="ic" style="--c:var(--bl);margin-bottom:6px">' + mi("fingerprint", 24) + '</div>' +
+        '<b style="font-size:14px;display:block">' + (isEn ? "Biometrics & Sign In" : "البصمة / Face ID") + '</b>' +
+        '<div class="mu" style="font-size:11.5px;margin-top:3px">' + (isEn ? "Unlock your account with Fingerprint, Face ID, or password" : "للدخول لحسابك بالبصمة أو Face ID أو الباسورد") + '</div>' +
+      '</div>' +
+      '<div class="cd" role="button" tabindex="0" onclick="window.idcSetOuterTab(\'emerg\')" style="margin:0;padding:12px;cursor:pointer;border:2px solid ' + (isEm ? "#b42318" : "rgba(212,80,106,.38)") + ';background:' + (isEm ? "color-mix(in srgb,#b42318 12%,var(--cd))" : "var(--cd)") + '">' +
+        '<div class="ic" style="--c:#b42318;margin-bottom:6px">' + mi("emergency", 24) + '</div>' +
+        '<b style="font-size:14px;display:block">' + (isEn ? "Emergency (No Password)" : "الطوارئ (بدون باسورد)") + '</b>' +
+        '<div class="mu" style="font-size:11.5px;margin-top:3px">' + (isEn ? "Instant access for anyone helping the user in an emergency" : "يفتح فورًا بدون باسورد لو حصل أي حاجة لليوزر") + '</div>' +
+      '</div>' +
+    '</div>';
+  };
+
   function persistVault() {
     if (!currentUser || !vaultKey || !vaultSalt || S.preview) return Promise.resolve();
+    syncPublicEmergencyCache(S.em, S.p);
 
     saveQueue = saveQueue.catch(function () {}).then(async function () {
       if (!vaultKey || !currentUser) return;
@@ -239,6 +340,8 @@
     S.sec = vault.sec || S.sec;
     S.log = Array.isArray(vault.log) ? vault.log : [];
     S.em = vault.em || null;
+    syncPublicEmergencyCache(S.em, S.p);
+    outerLockTab = "unlock";
     S.tab = vault.tab === "private" ? "public" : (vault.tab || "public");
     S.nav = vault.nav || "home";
     S.otab = vault.otab || "data";
@@ -811,13 +914,19 @@
   };
 
   function lockMarkup() {
-    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتحي بالبصمة / Face ID أو أدخلي كلمة مرور حسابك.</div>' +
-      '<button class="bt o w" type="button" style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--bl);color:var(--bl)" onclick="window.idcOuterBioUnlock()">' + mi("fingerprint") + ' فتح بالبصمة / Face ID</button>' +
-      '<div class="f"><input id="unlockEmail" type="email" dir="ltr" value="' + esc(currentUser && currentUser.email || "") + '" placeholder=" "><label>البريد الإلكتروني</label></div>' +
-      '<div class="f"><input id="unlockPassword" type="password" dir="ltr" placeholder=" "><label>كلمة المرور</label></div>' +
-      '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
-      '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
-      '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button></div>';
+    var isEm = outerLockTab === "emerg";
+    var body = isEm
+      ? window.idcOuterEmergencyCardHtml()
+      : ('<button class="bt o w" type="button" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--bl);color:var(--bl)" onclick="window.idcOuterBioUnlock()">' + mi("fingerprint") + ' فتح بالبصمة / Face ID</button>' +
+        '<div class="f"><input id="unlockEmail" type="email" dir="ltr" value="' + esc(currentUser && currentUser.email || "") + '" placeholder=" "><label>البريد الإلكتروني</label></div>' +
+        '<div class="f"><input id="unlockPassword" type="password" dir="ltr" placeholder=" "><label>كلمة المرور</label></div>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
+        '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
+        '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button>');
+    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتحي بالبصمة / Face ID أو استخدمي وضع الطوارئ.</div>' +
+      window.idcOuterPartitionsBarHtml() +
+      body +
+      '</div>';
   }
 
   async function unlockWith(email, password) {
