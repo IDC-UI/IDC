@@ -78,3 +78,12 @@ Do not store real personal data until a Supabase project is configured, the migr
 - [`supabase/functions/secure-vault/index.ts`](supabase/functions/secure-vault/index.ts): authenticated server-side vault payload validation and persistence.
 - [`supabase/functions/secure-upload/index.ts`](supabase/functions/secure-upload/index.ts): authenticated encrypted file validation and Storage upload.
 - [`SETUP.md`](SETUP.md): concise deployment steps.
+
+## Security hardening (Nov 2026)
+
+- The derived vault key is kept in memory only; reloads land on the lock screen. No local-only accounts, no local login fallback, no direct-table write fallback.
+- Email confirmation is required before a vault opens; passwords must be 12+ characters with letters and digits.
+- Edge Functions: strict CORS allow-list (`ALLOWED_ORIGINS`), per-user rate limits in Postgres, pinned `supabase-js`, no-store/nosniff headers.
+- Database: rate-limit table behind a `SECURITY DEFINER` function, upload path/count limits, no PUBLIC grants.
+- Browser: CSP, forced HTTPS, no referrer, service worker no longer caches authenticated or cross-origin responses.
+- Tests: `node --experimental-strip-types tests/security.test.mjs`. Remaining manual steps are in [`SECURITY.md`](SECURITY.md).

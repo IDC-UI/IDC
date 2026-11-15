@@ -112,7 +112,7 @@
   function currentUserId() {
     if (S.userEmail) return String(S.userEmail).toLowerCase();
     if (S.user) return String(S.user).toLowerCase();
-    if (!S.sid) { S.sid = 1000 + Math.floor(Math.random() * 9000); }
+    if (!S.sid) { S.sid = 1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000; }
     return "idc-" + S.sid;
   }
 

@@ -1,0 +1,227 @@
+{
+  "at": "2026-11-15T06:59:51.067Z",
+  "passed": 44,
+  "total": 44,
+  "results": [
+    {
+      "name": "S1  HTTPS redirect script is the first script in <head>",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S2  CSP meta present with object-src none, base-uri self, upgrade-insecure-requests",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S3  CSP connect-src is limited to own origin + the Supabase project",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S4  every err message rendered into HTML goes through esc()",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S5  hard-coded demo OTP removed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S6  no Math.random left for OTP / ids",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S7  password hash is PBKDF2 (no unsalted SHA-256, no base64 fallback)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S8  legacy local login no longer auto-creates accounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S9  vault key is never written to localStorage (no 'k:' / 's:' session payload)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S10 no direct-table upsert fallback and no local_ account creation in auth code",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S11 service worker never caches cross-origin / authenticated requests",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S12 Edge Functions: JWT verified, rate limited, CORS allow-list (no wildcard)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S13 Edge Functions pin supabase-js to an exact version",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S14 SQL: RLS on, rate-limit fn is SECURITY DEFINER with empty search_path, no anon/PUBLIC grants",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S15 SQL: parameterised only (no EXECUTE / dynamic SQL anywhere in migrations)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S16 no raw SQL string building in frontend or functions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S17 auth config: min password 12, confirmations on, signups rate limited, anon off",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S18 no admin routes / pages / debug flags exist",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S19 no secret/service-role keys or JWTs in shipped files (only the public publishable key)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E1  allowed origin gets CORS header, no wildcard",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E2  foreign origin is rejected with 403",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E3  non-POST rejected with 405",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E4  preflight returns 204",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E5  no ALLOWED_ORIGINS configured => browser requests fail closed (503)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E6  rate limit: RPC false => limited",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E7  rate limit: RPC error => fails closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1  sign-up with a short password is rejected client-side (no API call)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1b password without digits rejected",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1c password containing the e-mail name rejected",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2  sign-up without confirmed e-mail opens no vault and writes no local vault/session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3a legacy session containing the vault key is deleted on load",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3b login succeeds and opens the home screen",
+      "ok": true,
+      "detail": "home"
+    },
+    {
+      "name": "T3c derived vault key is NOT present anywhere in localStorage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3d only ciphertext+salt were sent to the Edge Function, never the key or plaintext",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3e sign-out clears cached ciphertext and session",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4a (setup) a cached local vault exists on the device",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4b with the server refusing the login, the cached local vault does NOT let anyone in",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4c network failure during login is handled (no crash, no entry)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T5  when secure-vault fails there is no direct idc_vaults upsert fallback",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T6  tampered vault rejected: path traversal in attachment",
+      "ok": true,
+      "detail": "auth"
+    },
+    {
+      "name": "T6  tampered vault rejected: script-injection id",
+      "ok": true,
+      "detail": "auth"
+    },
+    {
+      "name": "T7  after 5 bad logins the client stops calling the API (back-off active)",
+      "ok": true,
+      "detail": "signIn calls=5"
+    },
+    {
+      "name": "T8  page reload with a stored Supabase session shows the lock screen (key not recoverable)",
+      "ok": true,
+      "detail": "<div class=\"ac\"><div class=\"wm\">IDC</div><h2 style=\"text-ali"
+    },
+    {
+      "name": "T8b sign-out in another tab wipes in-memory state",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

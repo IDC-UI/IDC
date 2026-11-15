@@ -1,1 +1,11 @@
 supabase/.temp/
+supabase/.branches/
+.env
+.env.*
+*.env
+supabase/functions/.env
+supabase/.env
+*.pem
+*.key
+node_modules/
+.DS_Store

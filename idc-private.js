@@ -217,13 +217,17 @@
   }
 
   function partitions() {
-    var emReady = Boolean(S.em && Object.keys(S.em).some(function (k) { return S.em[k]; }));
-    var status = !S.pv ? L("غير مفعّل · اضغطي للإعداد", "Not set up · tap to set up")
-      : pvKey ? L("مفتوح الآن", "Open now") : L("مقفول · 3 باسوردات + بصمة / Face ID", "Locked · 3 passwords + biometrics");
-    return '<div class="pvg">' +
-      '<div class="pvc em" role="button" tabindex="0" onclick="IDCPrivate.openEmergency()"><div class="pvi">' + mi("emergency", 26) + '</div><b>' + L("الطوارئ", "Emergency") + '</b><span>' + L("بيانات تتفتح لأي حد حواليكِ لو حصل لكِ حاجة", "Opens for anyone nearby if something happens to you") + '</span><i class="pvs">' + (emReady ? L("بياناتك جاهزة ✓", "Your details are ready ✓") : L("أضيفي بيانات الطوارئ", "Add emergency details")) + '</i></div>' +
-      '<div class="pvc pr' + (pvKey ? " open" : "") + '" role="button" tabindex="0" onclick="IDCPrivate.open()"><div class="pvi">' + mi(pvKey ? "lock_open" : "fingerprint", 26) + '</div><b>' + L("القسم الخاص", "Private Data") + '</b><span>' + L("بياناتك الخاصة، مقفولة بـ 3 باسوردات + البصمة / Face ID", "Your private data, behind 3 passwords + Fingerprint / Face ID") + '</span><i class="pvs">' + status + '</i></div>' +
-      '</div>';
+    var emReady = Boolean(S.em && Object.keys(S.em).some(function (k) { return k !== "xpw" && S.em[k] && String(S.em[k]).trim(); }));
+    var pvReady = Boolean(S.pv && S.pv.ct);
+    if (emReady && pvReady) return "";
+    var cards = [];
+    if (!emReady) {
+      cards.push('<div class="pvc em" role="button" tabindex="0" onclick="IDCPrivate.openEmergency()"><div class="pvi">' + mi("emergency", 26) + '</div><b>' + L("الطوارئ", "Emergency") + '</b><span>' + L("بيانات تتفتح لأي حد حواليكِ لو حصل لكِ حاجة", "Opens for anyone nearby if something happens to you") + '</span><i class="pvs">' + L("أضيفي بيانات الطوارئ", "Add emergency details") + '</i></div>');
+    }
+    if (!pvReady) {
+      cards.push('<div class="pvc pr" role="button" tabindex="0" onclick="IDCPrivate.open()"><div class="pvi">' + mi("fingerprint", 26) + '</div><b>' + L("القسم الخاص", "Private Data") + '</b><span>' + L("بياناتك الخاصة، مقفولة بـ 3 باسوردات + البصمة / Face ID", "Your private data, behind 3 passwords + Fingerprint / Face ID") + '</span><i class="pvs">' + L("غير مفعّل · اضغطي للإعداد", "Not set up · tap to set up") + '</i></div>');
+    }
+    return '<div class="pvg"' + (cards.length === 1 ? ' style="grid-template-columns:1fr"' : "") + ">" + cards.join("") + "</div>";
   }
 
   function showErr(msg) { var e = document.getElementById("pvErr"); if (e) e.textContent = msg || ""; }

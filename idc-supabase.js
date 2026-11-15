@@ -29,10 +29,21 @@
 
   if (client) {
     window.onSec = function () {
-      var message = S.lang === "en"
-        ? "Vault content is encrypted on this device before storage (AES-256-GCM). Your Emergency partition is accessible when needed, while your Private partition is sealed with 3 passwords + Fingerprint / Face ID and auto-locks on exit."
-        : "محتوى المحفظة مشفّر على جهازك بمعيار AES-256-GCM. قسم الطوارئ متاح عند الحاجة بدون باسورد، بينما القسم الخاص محمي بـ 3 كلمات مرور + البصمة / Face ID ويُقفل تلقائيًا بمجرد الخروج منه.";
-      return '<h2 style="font-size:24px;font-weight:700;margin-bottom:12px">' + (S.lang === "en" ? "Security status" : "حالة الأمان") + '</h2><div class="nt" style="line-height:1.9">' + esc(message) + '</div>';
+      var en = S.lang === "en";
+      var layers = [
+        [en ? "End-to-End Vault Encryption (AES-256-GCM)" : "تشفير المحفظة طرف لطرف (AES-256-GCM)", en ? "Key derived via PBKDF2 (250,000 iterations) in memory only; never saved in localStorage." : "يُشتق المفتاح عبر PBKDF2 بـ 250,000 دورة في الذاكرة فقط ولا يُحفظ في المتصفح."],
+        [en ? "Outer App Biometric Unlock (Fingerprint / Face ID)" : "فتح التطبيق من الخارج بالبصمة / Face ID", en ? "Hardware-backed WebAuthn + unextractable IndexedDB CryptoKey for instant outer sign-in." : "دخول سريع للتطبيق من الشاشة الخارجية عبر بصمة الجهاز / Face ID ومفتاح غير قابل للاستخراج."],
+        [en ? "3-Password + Biometric Private Partition" : "حماية القسم الخاص (3 باسوردات + بصمة / Face ID)", en ? "Sealed with your account password + second Gmail password + extra password + WebAuthn platform biometrics." : "معزول بباسورد حسابك + باسورد جيميل مختلف + باسورد إضافي + بصمة الجهاز / Face ID."],
+        [en ? "Instant Auto-Lock & Memory Wipe" : "قفل تلقائي فوري ومسح النص الصريح", en ? "Locks immediately when you leave the Private tab, after 60s idle, or when backgrounded." : "يُقفل فور الخروج من القسم الخاص أو بعد 60 ثانية خمول أو عند تصغير التطبيق."],
+        [en ? "Access Audit Log (When · Where · How)" : "سجل مراقبة الدخول (إمتى · فين · إزاي)", en ? "Records every unlock and failed attempt with timestamp, GPS coordinates, and device info." : "يسجل كل فتح أو محاولة فاشلة بالتاريخ والوقت والموقع الجغرافي (GPS) ونوع الجهاز."],
+        [en ? "Smart NFC Card & Emergency Partition" : "حماية كارت الـ NFC ووضع الطوارئ", en ? "Emergency details open without a password to save lives; public card requires External Password while Private data stays locked." : "وضع الطوارئ يفتح فورًا للإنقاذ بدون باسورد، وبيانات الكارت محمية بالباسورد الخارجي بينما تظل البيانات الخاصة مقفولة."],
+        [en ? "Database Isolation (RLS & Rate Limiting)" : "عزل قواعد البيانات (Supabase RLS & Rate Limiting)", en ? "Row-Level Security, encrypted file envelopes, strict CORS allow-list, and brute-force rate limiting." : "صلاحيات صف بصف (RLS)، تشفير المرفقات قبل الرفع، وحماية ضد المحاولات المتكررة."]
+      ];
+      var bioCard = '<div class="cd it" style="margin-bottom:12px;--c:var(--bl)"><div class="ic">' + mi("fingerprint") + '</div><div class="g"><b style="font-weight:700">' + (en ? "Outer App Fingerprint / Face ID" : "البصمة / Face ID للدخول من برا") + '</b><div class="mu" style="font-size:12px">' + (en ? "Register your device fingerprint or Face ID to unlock the app directly from the outer screen." : "سجّلي بصمة موبايلك أو Face ID لفتح التطبيق مباشرة من الشاشة الخارجية بدون كتابة الباسورد كل مرة.") + '</div></div><button class="bt" style="height:36px;padding:0 14px" onclick="window.idcOuterBioRegister()">' + (en ? "Register Biometrics" : "تسجيل البصمة") + "</button></div>";
+      var rows = layers.map(function (l) {
+        return '<div class="rw" style="align-items:flex-start;gap:10px"><div><b style="font-weight:600;display:block">' + esc(l[0]) + '</b><div class="mu" style="font-size:12px;margin-top:2px">' + esc(l[1]) + '</div></div><span class="ch ok" style="margin:0;flex:none">' + (en ? "✓ Active" : "✓ فعّال") + "</span></div>";
+      }).join("");
+      return sec(bioCard + rows, layers.length, layers.length);
     };
     window.offSec = window.onSec;
   }
@@ -85,28 +96,15 @@
     return all[String(email || "").toLowerCase()] || null;
   }
 
-  function saveActiveSession(user, keyBytes, saltBytes) {
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({
-        user: {
-          id: user.id,
-          email: user.email,
-          user_metadata: user.user_metadata || {}
-        },
-        k: base64Url(keyBytes),
-        s: base64Url(saltBytes),
-        at: Date.now()
-      }));
-    } catch (e) {}
+  // SECURITY: the derived vault key and salt are never written to storage. They live only in
+  // memory, so a reload, a stolen device or an XSS read of localStorage cannot recover them.
+  // This function now only wipes any key that older versions of the app left behind.
+  function saveActiveSession() {
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   }
 
   function clearActiveSession() {
     try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
-  }
-
-  function getActiveSession() {
-    try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
-    catch (e) { return null; }
   }
 
   function backendRequired() {
@@ -130,9 +128,17 @@
     if (!value || typeof value !== "object" || (value.p !== null && typeof value.p !== "object") || !Array.isArray(value.items)) return false;
     if (value.items.length > 1000) return false;
     return value.items.every(function (item) {
-      return item && typeof item === "object" &&
-        typeof item.title === "string" && item.title.length <= 200 &&
-        typeof item.value === "string" && item.value.length <= 10000;
+      if (!item || typeof item !== "object" || typeof item.title !== "string" || item.title.length > 200 ||
+        typeof item.value !== "string" || item.value.length > 10000) return false;
+      if (item.id != null && !/^[A-Za-z0-9_-]{1,64}$/.test(String(item.id))) return false;
+      if (item.att != null) {
+        var att = item.att;
+        if (typeof att !== "object") return false;
+        if (att.path != null && !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.enc$/i.test(String(att.path))) return false;
+        if (att.t != null && att.t !== "pdf" && att.t !== "img") return false;
+        if (att.mime != null && !/^(application\/pdf|image\/(jpeg|png|webp))$/.test(String(att.mime))) return false;
+      }
+      return true;
     }) && (value.pv == null || (typeof value.pv === "object" && typeof value.pv.ct === "string" && typeof value.pv.salt === "string"));
   }
 
@@ -178,17 +184,12 @@
             var result = await client.functions.invoke("secure-vault", {
               body: { salt: saltStr, ciphertext: ciphertext }
             });
-            if (result.error || !result.data || result.data.saved !== true) {
-              await client.from("idc_vaults").upsert({
-                user_id: currentUser.id,
-                salt: saltStr,
-                ciphertext: ciphertext,
-                updated_at: new Date().toISOString()
-              }, { onConflict: "user_id" });
-            }
+            // All writes go through the validating Edge Function; there is no direct-table fallback.
+            if (result.error || !result.data || result.data.saved !== true) throw new Error("vault-save-failed");
           }
         } catch (remoteErr) {
-          // Local encrypted copy is already saved above
+          // The encrypted local copy is already saved above; tell the caller the cloud copy is stale.
+          throw remoteErr;
         }
       }
     });
@@ -222,7 +223,10 @@
     localSave();
   };
 
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   function applyVaultToState(vault, user) {
+    if (!user || !UUID_RE.test(String(user.id))) throw new Error("Invalid user");
     var defaultName = (user.user_metadata && user.user_metadata.display_name) || (user.email ? user.email.split("@")[0] : "مستخدم");
     currentUser = user;
     S.preview = 0;
@@ -260,6 +264,7 @@
     }
 
     var localRow = getLocalVault(user.email);
+    if (localRow && localRow.user_id !== user.id) localRow = null;
     var sourceRow = remoteRow || localRow;
     var vault = null;
 
@@ -298,111 +303,91 @@
 
     var needsProfileSetup = isNewSignup && (!vault.p || !vault.p.nid);
     applyVaultToState(vault, user);
-    saveActiveSession(currentUser, vaultKey, vaultSalt);
-    await persistVault();
+    saveActiveSession();
+    try { await persistVault(); } catch (e) { tst("تعذر حفظ نسخة المحفظة المشفرة دلوقتي؛ هنحاول تاني مع أول تعديل."); }
     go({ screen: needsProfileSetup ? "profile" : "home", nav: "home" });
   }
 
   async function restorePersistedSession() {
-    var saved = getActiveSession();
-    if (!saved || !saved.user || !saved.k || !saved.s) return false;
-    try {
-      var keyBytes = fromBase64Url(saved.k);
-      var saltBytes = fromBase64Url(saved.s);
-      var user = saved.user;
-      var localRow = getLocalVault(user.email);
-      if (localRow && localRow.ciphertext) {
-        var vault = await window.IDCrypto.dec(localRow.ciphertext, keyBytes);
-        if (isSafeVault(vault)) {
-          vaultKey = keyBytes;
-          vaultSalt = saltBytes;
-          applyVaultToState(vault, user);
-          S.screen = "home";
-          S.nav = "home";
-          R();
-        }
-      }
-      if (client && !String(user.id).startsWith("local_")) {
-        var result = await client.from("idc_vaults")
-          .select("salt,ciphertext")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!result.error && result.data) {
-          var rSalt = fromBase64Url(result.data.salt);
-          var rVault = await window.IDCrypto.dec(result.data.ciphertext, keyBytes);
-          if (isSafeVault(rVault)) {
-            vaultKey = keyBytes;
-            vaultSalt = rSalt;
-            var keepLocalPv = S.pv && (!rVault.pv || (S.pv.at && rVault.pv.at && S.pv.at > rVault.pv.at));
-            if (keepLocalPv) rVault.pv = S.pv;
-            applyVaultToState(rVault, user);
-            saveActiveSession(currentUser, vaultKey, vaultSalt);
-            setLocalVault(user.email, {
-              user_id: user.id,
-              email: user.email,
-              name: S.uname,
-              salt: result.data.salt,
-              ciphertext: result.data.ciphertext,
-              updated_at: new Date().toISOString()
-            });
-            S.screen = "home";
-            R();
-          }
-        }
-      }
-      return Boolean(currentUser && vaultKey);
-    } catch (e) {
-      return false;
-    }
+    // Reloads always land on the lock screen: the vault key is not stored anywhere.
+    saveActiveSession();
+    return false;
+  }
+
+  var MIN_PASSWORD = 12;
+  var COMMON_PASSWORDS = ["password1234", "123456789012", "qwertyuiop12", "iloveyou1234", "administrator", "welcome12345"];
+  function passwordProblem(password, email) {
+    password = String(password || "");
+    if (password.length < MIN_PASSWORD) return "اختاري كلمة مرور من 12 حرفًا على الأقل.";
+    if (password.length > 128) return "كلمة المرور طويلة جدًا (الحد الأقصى 128 حرفًا).";
+    if (!(/[A-Za-z\u0600-\u06FF]/.test(password) && /\d/.test(password))) return "كلمة المرور لازم تحتوي على حروف وأرقام.";
+    if (/^(.)\1+$/.test(password) || COMMON_PASSWORDS.indexOf(password.toLowerCase()) >= 0) return "كلمة المرور دي سهلة التخمين. اختاري غيرها.";
+    var local = String(email || "").split("@")[0].toLowerCase();
+    if (local.length >= 4 && password.toLowerCase().indexOf(local) >= 0) return "كلمة المرور ما ينفعش تحتوي على جزء من بريدك.";
+    return "";
+  }
+  window.IDCPasswordProblem = passwordProblem;
+
+  // Client-side login back-off. This is only a UX layer; the real rate limit is enforced by
+  // Supabase Auth (see supabase/config.toml [auth.rate_limit]) because the browser can be bypassed.
+  var THROTTLE_KEY = "idc_login_throttle";
+  function throttleState() {
+    try { return JSON.parse(localStorage.getItem(THROTTLE_KEY)) || { n: 0, until: 0 }; }
+    catch (e) { return { n: 0, until: 0 }; }
+  }
+  function throttleLeft() {
+    var st = throttleState();
+    return st.until > Date.now() ? Math.ceil((st.until - Date.now()) / 1000) : 0;
+  }
+  function throttleFail() {
+    var st = throttleState();
+    st.n = (st.n || 0) + 1;
+    if (st.n >= 5) st.until = Date.now() + 30000 * Math.pow(2, Math.min(st.n - 5, 5));
+    try { localStorage.setItem(THROTTLE_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function throttleReset() {
+    try { localStorage.removeItem(THROTTLE_KEY); } catch (e) {}
   }
 
   window.doSu = async function () {
+    if (!backendRequired()) return;
     var name = v("nm");
     var email = v("em").toLowerCase();
     var password = v("pw");
     if (!name || name.length > 100 || !emailValid(email)) return setError("اكتبي اسمًا وبريدًا إلكترونيًا صحيحًا.");
-    if (password.length < 8) return setError("اختاري كلمة مرور من 8 حروف أو أرقام على الأقل.");
+    var problem = passwordProblem(password, email);
+    if (problem) return setError(problem);
     if (password !== v("pw2")) return setError("كلمتا المرور غير متطابقتين.");
 
-    var existingLocal = getLocalVault(email);
-    if (existingLocal) {
-      return setError("هذا البريد مسجل بالفعل. سجّلي الدخول.");
-    }
-
     err = "";
-    var supaUser = null;
-    if (client) {
-      try {
-        var result = await client.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            data: { display_name: name },
-            emailRedirectTo: window.location.origin + window.location.pathname
-          }
-        });
-        if (result.error) {
-          var msg = String(result.error.message || "");
-          if (/already registered|user already registered/i.test(msg)) {
-            return setError("هذا البريد مسجل بالفعل. سجّلي الدخول.");
-          }
-          // If Supabase hits email rate limit or requires confirmation, still provision local E2E vault so user can enter immediately
-        } else if (result.data && result.data.user) {
-          supaUser = result.data.user;
-        }
-      } catch (e) {}
-    }
-
-    if (!supaUser) {
-      supaUser = {
-        id: "local_" + base64Url(crypto.getRandomValues(new Uint8Array(12))),
+    var result;
+    try {
+      result = await client.auth.signUp({
         email: email,
-        user_metadata: { display_name: name }
-      };
-    } else {
-      supaUser.user_metadata = Object.assign({ display_name: name }, supaUser.user_metadata || {});
+        password: password,
+        options: {
+          data: { display_name: name },
+          emailRedirectTo: window.location.origin + window.location.pathname
+        }
+      });
+    } catch (e) {
+      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
+    }
+    if (result.error) return setError(appError(result.error));
+    var supaUser = result.data && result.data.user;
+    if (!supaUser) return setError("تعذر إكمال الطلب. حاولي مرة أخرى.");
+
+    // Email confirmation is mandatory: no session means the address is not confirmed yet,
+    // so no vault is opened and no account exists only on this device.
+    if (!result.data.session) {
+      au = { m: "login", d: { lg: email } };
+      err = "";
+      R();
+      tst("بعتنالك رابط تأكيد على بريدك. أكديه وبعدين سجّلي الدخول.");
+      return;
     }
 
+    supaUser.user_metadata = Object.assign({ display_name: name }, supaUser.user_metadata || {});
     try {
       await loadVault(password, supaUser, true);
       tst("تم إنشاء الحساب وفتح المحفظة المشفرة بنجاح");
@@ -412,54 +397,39 @@
   };
 
   window.doLogin = async function () {
+    if (!backendRequired()) return;
     var email = v("lg").toLowerCase();
     var password = v("lp");
     if (!emailValid(email) || !password) return setError("اكتبي بريدًا صحيحًا وكلمة المرور.");
+    var wait = throttleLeft();
+    if (wait) return setError("محاولات كتير. جرّبي بعد " + wait + " ثانية.");
 
     err = "";
-    var result = null;
-    if (client) {
-      try {
-        result = await client.auth.signInWithPassword({ email: email, password: password });
-        if (!result.error && result.data && result.data.user) {
-          try {
-            await loadVault(password, result.data.user, false);
-            return;
-          } catch (error) {
-            vaultKey = null;
-            currentUser = null;
-            await client.auth.signOut();
-            return setError("كلمة المرور لا تطابق المحفظة المشفرة لهذا الحساب.");
-          }
-        }
-      } catch (e) {}
+    var result;
+    try {
+      result = await client.auth.signInWithPassword({ email: email, password: password });
+    } catch (e) {
+      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
     }
-
-    // Fallback to local encrypted vault on this device (e.g., created before email confirmation or while offline)
-    var localRow = getLocalVault(email);
-    if (localRow && localRow.ciphertext && localRow.salt) {
-      try {
-        var lSalt = fromBase64Url(localRow.salt);
-        var lKey = await window.IDCrypto.fromPass(password, lSalt);
-        var lVault = await window.IDCrypto.dec(localRow.ciphertext, lKey);
-        if (!isSafeVault(lVault)) throw new Error("invalid");
-        vaultSalt = lSalt;
-        vaultKey = lKey;
-        var lUser = {
-          id: localRow.user_id || ("local_" + email),
-          email: email,
-          user_metadata: { display_name: localRow.name || (lVault.p && lVault.p.n) || email.split("@")[0] }
-        };
-        applyVaultToState(lVault, lUser);
-        saveActiveSession(currentUser, vaultKey, vaultSalt);
-        go({ screen: "home", nav: "home" });
-        return;
-      } catch (localErr) {
-        return setError("البريد أو كلمة المرور غير صحيحة.");
+    if (result.error || !result.data || !result.data.user) {
+      throttleFail();
+      return setError(appError(result.error));
+    }
+    try {
+      var wantBio = typeof document !== "undefined" && document.getElementById("regLoginBio") && document.getElementById("regLoginBio").checked;
+      await loadVault(password, result.data.user, false);
+      throttleReset();
+      if (wantBio && window.idcOuterBioRegister) {
+        await window.idcOuterBioRegister(true);
       }
+    } catch (error) {
+      vaultKey = null;
+      vaultSalt = null;
+      currentUser = null;
+      try { await client.auth.signOut(); } catch (e) {}
+      throttleFail();
+      setError("كلمة المرور لا تطابق المحفظة المشفرة لهذا الحساب.");
     }
-
-    return setError(result && result.error ? appError(result.error) : "البريد أو كلمة المرور غير صحيحة.");
   };
 
   window.doF1 = async function () {
@@ -482,7 +452,8 @@
   window.doF3 = async function () {
     if (!backendRequired() || !recoveryPending) return setError("ابدئي الاستعادة من رابط البريد المرسل بواسطة Supabase.");
     var password = v("np");
-    if (password.length < 8) return setError("اختاري كلمة مرور من 8 حروف على الأقل.");
+    var newProblem = passwordProblem(password, "");
+    if (newProblem) return setError(newProblem);
     if (password !== v("np2")) return setError("كلمتا المرور غير متطابقتين.");
 
     var userResult = await client.auth.getUser();
@@ -519,6 +490,7 @@
 
   window.idcSignOut = async function () {
     clearActiveSession();
+    try { localStorage.removeItem(LOCAL_VAULTS_KEY); } catch (e) {}
     if (window.IDCPrivate) window.IDCPrivate.reset();
     if (client) {
       try { await client.auth.signOut(); } catch (e) {}
@@ -702,10 +674,148 @@
 
   window.IDCUnlockVault = function () { return Boolean(currentUser && vaultKey); };
 
+  /* ---- Outer App WebAuthn Fingerprint / Face ID (IndexedDB unextractable CryptoKey) ---- */
+  function openBioDb() {
+    return new Promise(function (resolve, reject) {
+      if (typeof indexedDB === "undefined") return reject(new Error("no_idb"));
+      var req = indexedDB.open("idc_outer_bio_v1", 1);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains("bio")) db.createObjectStore("bio", { keyPath: "id" });
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+
+  async function saveOuterBioRecord(rec) {
+    var db = await openBioDb();
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction("bio", "readwrite");
+      tx.objectStore("bio").put(rec);
+      tx.oncomplete = function () { db.close(); resolve(true); };
+      tx.onerror = function () { db.close(); reject(tx.error); };
+    });
+  }
+
+  async function loadOuterBioRecord(id) {
+    var db = await openBioDb();
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction("bio", "readonly");
+      var req = tx.objectStore("bio").get(id || "default");
+      req.onsuccess = function () { db.close(); resolve(req.result || null); };
+      req.onerror = function () { db.close(); reject(req.error); };
+    });
+  }
+
+  window.idcOuterBioRegister = async function (silent) {
+    if (!currentUser || !vaultKey || !vaultSalt) {
+      if (!silent) tst(S.lang === "en" ? "Sign in with your password first to register biometrics." : "سجّلي الدخول بكلمة المرور أولًا لتفعيل البصمة.");
+      return false;
+    }
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      if (!silent) tst(S.lang === "en" ? "Biometrics not supported on this browser." : "هذا المتصفح لا يدعم البصمة / Face ID.");
+      return false;
+    }
+    try {
+      var challenge = crypto.getRandomValues(new Uint8Array(32));
+      var cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: challenge,
+          rp: { name: "IDC", id: location.hostname || "localhost" },
+          user: {
+            id: new TextEncoder().encode(String(currentUser.id).slice(0, 64)),
+            name: currentUser.email || "idc-user",
+            displayName: S.uname || currentUser.email || "IDC"
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+          timeout: 60000,
+          attestation: "none"
+        }
+      });
+      var wrapKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      var iv = crypto.getRandomValues(new Uint8Array(12));
+      var payloadBytes = new TextEncoder().encode(JSON.stringify({
+        v: Array.from(vaultKey),
+        z: Array.from(vaultSalt),
+        u: { id: currentUser.id, email: currentUser.email, user_metadata: currentUser.user_metadata || {} }
+      }));
+      var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, wrapKey, payloadBytes));
+      await saveOuterBioRecord({
+        id: "default",
+        credId: base64Url(new Uint8Array(cred.rawId)),
+        wrapKey: wrapKey,
+        iv: iv,
+        ct: ct,
+        email: currentUser.email
+      });
+      if (!silent) tst(S.lang === "en" ? "Outer Fingerprint / Face ID registered ✓" : "تم تسجيل البصمة / Face ID للدخول الخارجي بنجاح ✓");
+      return true;
+    } catch (e) {
+      if (!silent) tst(S.lang === "en" ? "Biometric registration was cancelled." : "تم إلغاء تسجيل البصمة / Face ID.");
+      return false;
+    }
+  };
+
+  window.idcOuterBioUnlock = async function () {
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      return setError(S.lang === "en" ? "Biometrics not supported on this browser." : "البصمة / Face ID غير مدعومة على هذا المتصفح.");
+    }
+    try {
+      var rec = await loadOuterBioRecord("default");
+      if (!rec || !rec.credId || !rec.wrapKey) {
+        return setError(S.lang === "en" ? "Sign in once with your password (with 'Enable Biometrics' checked) to register your Fingerprint / Face ID first." : "ادخلي أول مرة بكلمة المرور (مع تفعيل خيار البصمة) عشان تتسجل بصمتك / Face ID على الجهاز ده.");
+      }
+      var challenge = crypto.getRandomValues(new Uint8Array(32));
+      var assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: challenge,
+          rpId: location.hostname || "localhost",
+          allowCredentials: [{ type: "public-key", id: fromBase64Url(rec.credId), transports: ["internal"] }],
+          userVerification: "required",
+          timeout: 60000
+        }
+      });
+      var authData = new Uint8Array(assertion.response.authenticatorData);
+      if (!(authData[32] & 4)) throw new Error("uv_missing");
+      var plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: rec.iv }, rec.wrapKey, rec.ct);
+      var unwrapped = JSON.parse(new TextDecoder().decode(plainBuf));
+      var restoredKey = new Uint8Array(unwrapped.v);
+      var restoredSalt = new Uint8Array(unwrapped.z);
+      var userObj = currentUser || unwrapped.u;
+
+      var remoteRow = null;
+      if (client && userObj && userObj.id) {
+        try {
+          var res = await client.from("idc_vaults").select("salt,ciphertext").eq("user_id", userObj.id).maybeSingle();
+          if (!res.error && res.data) remoteRow = res.data;
+        } catch (e) {}
+      }
+      var localRow = getLocalVault(userObj.email);
+      var sourceRow = remoteRow || localRow;
+      if (!sourceRow || !sourceRow.ciphertext) {
+        return setError(S.lang === "en" ? "Please sign in with your email and password first." : "سجّلي الدخول بالبريد وكلمة المرور أول مرة.");
+      }
+      var vault = await window.IDCrypto.dec(sourceRow.ciphertext, restoredKey);
+      if (!isSafeVault(vault)) throw new Error("invalid_vault");
+      vaultKey = restoredKey;
+      vaultSalt = restoredSalt;
+      applyVaultToState(vault, userObj);
+      err = "";
+      go({ screen: "home", nav: "home" });
+      tst(S.lang === "en" ? "Unlocked with Fingerprint / Face ID ✓" : "تم فتح التطبيق بالبصمة / Face ID ✓");
+    } catch (e) {
+      setError(S.lang === "en" ? "Biometric verification was cancelled or failed. Use your password or try again." : "لم تكتمل البصمة / Face ID. حاولي تاني أو ادخلي بكلمة المرور.");
+    }
+  };
+
   function lockMarkup() {
-    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. أدخلي كلمة مرور حسابك لفك تشفير بياناتك.</div>' +
+    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتحي بالبصمة / Face ID أو أدخلي كلمة مرور حسابك.</div>' +
+      '<button class="bt o w" type="button" style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--bl);color:var(--bl)" onclick="window.idcOuterBioUnlock()">' + mi("fingerprint") + ' فتح بالبصمة / Face ID</button>' +
       '<div class="f"><input id="unlockEmail" type="email" dir="ltr" value="' + esc(currentUser && currentUser.email || "") + '" placeholder=" "><label>البريد الإلكتروني</label></div>' +
       '<div class="f"><input id="unlockPassword" type="password" dir="ltr" placeholder=" "><label>كلمة المرور</label></div>' +
+      '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
       '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
       '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button></div>';
   }
@@ -713,40 +823,36 @@
   async function unlockWith(email, password) {
     if (!backendRequired()) return;
     if (!emailValid(email) || password.length < 6) return setError("أدخلي البريد وكلمة المرور الصحيحة.");
+    var wantBio = Boolean(document.getElementById("regOuterBio") && document.getElementById("regOuterBio").checked);
     await window.doLoginWithValues(email, password);
+    if (wantBio && currentUser && vaultKey) {
+      window.idcOuterBioRegister(true);
+    }
   }
 
   window.doLoginWithValues = async function (email, password) {
-    var result = await client.auth.signInWithPassword({ email: email, password: password });
-    if (!result.error && result.data && result.data.user) {
-      try {
-        await loadVault(password, result.data.user, false);
-        err = "";
-        return;
-      } catch (e) {}
+    var wait = throttleLeft();
+    if (wait) return setError("محاولات كتير. جرّبي بعد " + wait + " ثانية.");
+    var result;
+    try {
+      result = await client.auth.signInWithPassword({ email: email, password: password });
+    } catch (e) {
+      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
     }
-    var localRow = getLocalVault(email);
-    if (localRow) {
-      try {
-        var lSalt = fromBase64Url(localRow.salt);
-        var lKey = await window.IDCrypto.fromPass(password, lSalt);
-        var lVault = await window.IDCrypto.dec(localRow.ciphertext, lKey);
-        if (isSafeVault(lVault)) {
-          vaultSalt = lSalt;
-          vaultKey = lKey;
-          applyVaultToState(lVault, {
-            id: localRow.user_id || ("local_" + email),
-            email: email,
-            user_metadata: { display_name: localRow.name || email.split("@")[0] }
-          });
-          saveActiveSession(currentUser, vaultKey, vaultSalt);
-          err = "";
-          go({ screen: "home", nav: "home" });
-          return;
-        }
-      } catch (e) {}
+    if (result.error || !result.data || !result.data.user) {
+      throttleFail();
+      return setError("تعذر فك المحفظة. تأكدي من البريد وكلمة المرور.");
     }
-    setError("تعذر فك المحفظة. تأكدي من كلمة المرور الصحيحة.");
+    try {
+      await loadVault(password, result.data.user, false);
+      err = "";
+      throttleReset();
+    } catch (e) {
+      vaultKey = null;
+      vaultSalt = null;
+      throttleFail();
+      setError("تعذر فك المحفظة. تأكدي من كلمة المرور الصحيحة.");
+    }
   };
 
   window.idcUnlockVault = function () {
@@ -808,6 +914,22 @@
           R();
         }
       });
+    }
+    if (event === "SIGNED_OUT" && currentUser) {
+      vaultKey = null;
+      vaultSalt = null;
+      currentUser = null;
+      S.user = null;
+      S.userEmail = null;
+      S.p = null;
+      S.items = [];
+      S.pv = null;
+      S.em = null;
+      un = false;
+      pk = false;
+      au = { m: "login", d: {} };
+      S.screen = "auth";
+      R();
     }
     if (event === "PASSWORD_RECOVERY") {
       recoveryPending = true;
