@@ -166,6 +166,10 @@
       g: [{
         items: [
           L("Edit personal information|تعديل البيانات الشخصية", "", "edit"),
+          L("Bank accounts (IBAN / InstaPay)|حسابات البنك و InstaPay", function () {
+            var bks = (typeof S !== "undefined" && Array.isArray(S.items)) ? S.items.filter(function (i) { return i.type === "bank"; }).length : 0;
+            return String(bks);
+          }, "banks"),
           L("Change email|تغيير الإيميل", function () { return (typeof S !== "undefined" && S.userEmail) || "user@idc.app"; }, "email"),
           L("Change password|تغيير كلمة المرور", "", "password"),
           L("Profile picture|الصورة الشخصية", "", "photo"),
@@ -307,7 +311,9 @@
           ["Phone number|رقم الموبايل", p.ph || ""],
           ["National ID|الرقم القومي", p.nid || ""],
           ["Birth date|تاريخ الميلاد", p.bd || ""],
-          ["Governorate / City|المحافظة / المدينة", p.ct || ""]
+          ["Governorate / City|المحافظة / المدينة", p.ct || ""],
+          ["LinkedIn & Personal Links|رابط LinkedIn والروابط الشخصية", p.linkedin || ""],
+          ["Personal Route ID (/IDC/...)|معرّف الرابط الشخصي (/IDC/...)", (typeof S !== "undefined" && S.routeId) || (window.IDCAuthMiddleware ? window.IDCAuthMiddleware.getOwnerRouteId() : "1111")]
         ], "Save changes|حفظ التغييرات", "Changes saved|تم حفظ التغييرات", function (vals) {
           return reqd(vals.slice(0, 2), "Name and phone are required|الاسم والموبايل مطلوبين");
         }, function (vals) {
@@ -317,10 +323,33 @@
             S.p.nid = vals[2].trim() || S.p.nid;
             S.p.bd = vals[3].trim() || S.p.bd;
             S.p.ct = vals[4].trim() || S.p.ct;
+            S.p.linkedin = vals[5].trim();
+            if (vals[6] && /^[a-z0-9_-]{3,24}$/i.test(vals[6].trim())) {
+              S.routeId = vals[6].trim().toLowerCase();
+              S.p.routeId = S.routeId;
+            }
             if (typeof sv === "function") sv();
           }
           render();
         })]
+      },
+      banks: {
+        t: "Bank accounts (IBAN / InstaPay)|حسابات البنك و InstaPay",
+        b: [
+          P_("Add your bank account, IBAN, or InstaPay address. Saved inside your encrypted Private Vault by default.|أضف حسابك البنكي أو رقم IBAN أو عنوان InstaPay. يُحفظ افتراضيًا داخل القسم الخاص المشفر."),
+          F([
+            ["Bank Name (e.g. CIB, NBE, InstaPay)|اسم البنك (مثل CIB أو الأهلي أو InstaPay)", ""],
+            ["Account Number / IBAN / InstaPay|رقم الحساب أو IBAN أو عنوان InstaPay", ""]
+          ], "Add Bank Account to Vault|إضافة الحساب البنكي للخزنة", "Bank account saved|تم حفظ الحساب البنكي", function (vals) {
+            return reqd(vals, "Enter bank name and account/IBAN|أدخل اسم البنك ورقم الحساب أو IBAN");
+          }, function (vals) {
+            if (typeof S !== "undefined" && Array.isArray(S.items) && typeof window.mk === "function") {
+              S.items.unshift(window.mk("on", "private", "bank", "حساب بنكي · " + vals[0].trim(), vals[1].trim(), vals[0].trim()));
+              if (typeof sv === "function") sv();
+            }
+            render();
+          })
+        ]
       },
       email: {
         t: "Change email|تغيير الإيميل",

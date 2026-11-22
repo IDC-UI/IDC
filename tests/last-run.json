@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-22T18:45:11.395Z",
-  "passed": 48,
-  "total": 48,
+  "at": "2026-11-22T19:28:11.449Z",
+  "passed": 56,
+  "total": 56,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -115,6 +115,31 @@
     },
     {
       "name": "S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S24 User routes table enforces RLS, (select auth.uid()) initPlan, and revokes direct anon/public SELECT",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S25 authorize-route Edge Function middleware verifies JWT, enforces rate limiting, and blocks IDOR access",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S26 Clean URL router (404.html + IDCAuthMiddleware) resolves /IDC/<id> and enforces anti-IDOR authorization",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S27 First-time setup & NFC studio auto-generate personal URL + QR code and render step-by-step NFC programming guide",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S28 LinkedIn, custom user links, and Bank Accounts (IBAN / InstaPay) are supported across profile and vault",
       "ok": true,
       "detail": ""
     },
@@ -240,6 +265,21 @@
     },
     {
       "name": "T8b sign-out in another tab wipes in-memory state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T9a owner accessing their own route (/IDC/1111) is authorized as owner",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T9b changing URL ID to another user's route (/IDC/2222) is blocked by IDOR middleware (403)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T9c blocked IDOR attempt never leaks the current user's vault or grants owner access to route 2222",
       "ok": true,
       "detail": ""
     }

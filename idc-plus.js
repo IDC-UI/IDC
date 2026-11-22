@@ -88,15 +88,31 @@
     var m = location.hash.match(/^#e=([^&]+)&k=(.+)$/);
     return m && { c: m[1], k: m[2] };
   }
+  var routedFromSession = "";
+  try {
+    routedFromSession = sessionStorage.getItem("idc_requested_route") || "";
+    if (routedFromSession) sessionStorage.removeItem("idc_requested_route");
+  } catch (e) {}
+
   function cardParams() {
     var params = new URLSearchParams(window.location.search);
-    var userId = params.get("id");
+    var userId = params.get("id") || params.get("route") || routedFromSession;
+    if (!userId && location.pathname) {
+      var pm = location.pathname.match(/\/IDC\/([A-Za-z0-9_-]{3,24})\/?$/i);
+      if (pm && pm[1] && pm[1].toLowerCase() !== "index.html") userId = pm[1];
+    }
     var c = params.get("c");
     if (!c) {
       var hm = location.hash.match(/(?:^|[&#])c=([^&]+)/);
       if (hm) c = hm[1];
     }
     if (!userId && !c) return null;
+    if (routedFromSession && userId === routedFromSession) {
+      try {
+        var base = location.pathname.toLowerCase().indexOf("/idc/") === 0 ? "/IDC/" : "/";
+        history.replaceState(null, "", base + encodeURIComponent(userId) + location.hash);
+      } catch (e) {}
+    }
     return { id: userId ? userId.trim() : "", c: c || "" };
   }
 
@@ -105,15 +121,20 @@
     dismissed: false,
     tab: "gate",          // "gate" (shows both side-by-side + external password) or "emerg" (full emergency view)
     unlockedCard: null,   // decrypted public card { p, items } when unlocked on another phone
+    idorBlocked: false,
     err: "",
     busy: false
   };
 
   function currentUserId() {
+    if (window.IDCAuthMiddleware && typeof window.IDCAuthMiddleware.getOwnerRouteId === "function") {
+      return window.IDCAuthMiddleware.getOwnerRouteId();
+    }
+    if (S.routeId) return String(S.routeId).toLowerCase();
     if (S.userEmail) return String(S.userEmail).toLowerCase();
     if (S.user) return String(S.user).toLowerCase();
     if (!S.sid) { S.sid = 1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000; }
-    return "idc-" + S.sid;
+    return String(S.sid);
   }
 
   function isCardOwnerLoggedIn(targetId) {
@@ -121,7 +142,10 @@
     var hasSession = Boolean(S.p && !S.preview && S.user && (!window.IDCUnlockVault || window.IDCUnlockVault()));
     if (!hasSession) return false;
     var t = String(targetId).toLowerCase();
+    var ownerRoute = window.IDCAuthMiddleware ? window.IDCAuthMiddleware.getOwnerRouteId() : (S.routeId || "");
     return (
+      (ownerRoute && String(ownerRoute).toLowerCase() === t) ||
+      (ownerRoute && ("idc-" + ownerRoute).toLowerCase() === t) ||
       (S.userEmail && String(S.userEmail).toLowerCase() === t) ||
       (S.user && String(S.user).toLowerCase() === t) ||
       (S.sid && ("idc-" + S.sid).toLowerCase() === t) ||
@@ -278,7 +302,12 @@
       L("فتح حساب مختلف أو إنشاء حساب جديد في IDC", "Sign in with a different account or create a new IDC account") +
       "</button></div>";
 
-    return '<div class="sx">' + topBar + headerCard + twoPartitions + bodyContent + footerSwitch + "</div>";
+    var idorBanner = '<div class="nt" style="margin:0 0 12px;border:1.5px solid var(--rd);color:var(--tx);background:color-mix(in srgb,var(--rd) 12%,var(--cd))">' +
+      '<b style="color:var(--rd);display:block;margin-bottom:4px">🛡️ ' + L("حماية IDC Authorization Middleware (403 — منع الوصول غير المصرح)", "IDC Authorization Middleware (403 — IDOR Protection)") + '</b>' +
+      L("هذا الرابط (/IDC/" + esc(cp.id || "") + ") محمي بصلاحيات المالك؛ تغيير الـ ID في الرابط لا يسمح باستعراض بيانات أي مستخدم آخر. متاح فقط «وضع الطوارئ» أو فتح الكارت بالباسورد الخارجي لصاحب الكارت.", "This route (/IDC/" + esc(cp.id || "") + ") is protected by owner authorization; changing the URL ID cannot expose another user's account. Only Emergency Mode or the cardholder's External Password is available.") +
+      "</div>";
+
+    return '<div class="sx">' + topBar + idorBanner + headerCard + twoPartitions + bodyContent + footerSwitch + "</div>";
   }
 
   window.IDCCardGate = {
@@ -442,20 +471,83 @@
   }
 
   function renderQrAndLinkBox() {
-    if (!emLink) return "";
+    var shortUrl = window.IDCAuthMiddleware
+      ? window.IDCAuthMiddleware.buildPersonalUrl(currentUserId())
+      : (location.origin + location.pathname.replace(/\/?$/, "/") + encodeURIComponent(currentUserId()));
+    var linkToShow = emLink || shortUrl;
     var hasNfc = Boolean("NDEFReader" in window);
+    var stepsHtml = '<div class="cd" style="margin-top:12px;text-align:start;border:1px solid var(--ln)">' +
+      '<b style="display:block;font-size:15px;margin-bottom:8px">' + L("دليل برمجة كارت الـ NFC خطوة بخطوة", "Step-by-Step NFC Card Programming Guide") + "</b>" +
+      '<div class="rw" style="justify-content:flex-start;gap:10px"><span class="ch ok" style="margin:0">1</span><span>' + L("انسخ رابطك الشخصي أعلاه (" + esc(shortUrl) + ") أو اضغط «برمجة كارت NFC مباشرة» من المتصفح.", "Copy your personal link above or tap 'Write to NFC Card' directly.") + "</span></div>" +
+      '<div class="rw" style="justify-content:flex-start;gap:10px"><span class="ch ok" style="margin:0">2</span><span>' + L("لو جهازك لا يدعم البرمجة من المتصفح، افتح تطبيق NFC Tools المجاني ← اختر Write ← ثم Add a record ← ثم URL / URI والصق رابطك.", "Or open the free NFC Tools app → tap Write → Add a record → URL / URI and paste your personal link.") + "</span></div>" +
+      '<div class="rw" style="justify-content:flex-start;gap:10px"><span class="ch ok" style="margin:0">3</span><span>' + L("اضغط Write وضع كارت الـ NFC خلف الموبايل لمدة ثانيتين حتى يكتمل التسجيل.", "Tap Write and hold your physical NFC card against the back of your phone for 2 seconds.") + "</span></div>" +
+      '<div class="rw" style="justify-content:flex-start;gap:10px"><span class="ch ok" style="margin:0">4</span><span>' + L("للأجهزة بدون NFC: حمّل صورة الـ QR Code التلقائية بالأسفل ليتم مسحها بأي كاميرا موبايل.", "For phones without NFC: download your automatic QR Code below so any phone camera can scan it.") + "</span></div>" +
+    "</div>";
+
     return '<div class="cd" style="margin-top:16px;text-align:center;border:1.5px solid var(--bl)">' +
-      '<b style="display:block;font-size:15px;margin-bottom:8px">' + L("رابط الكارت الشخصي و QR (لبرمجة كارت الـ NFC)", "Personal NFC Card Link & QR Code") + "</b>" +
-      '<div id="emqr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px"></div>' +
-      '<div class="mu" dir="ltr" style="font-size:11px;word-break:break-all;margin:10px 0;background:var(--sf);padding:8px;border-radius:10px">' + esc(emLink) + "</div>" +
-      '<div class="ar" style="justify-content:center;gap:8px;flex-wrap:wrap">' +
-        '<button class="bt" onclick="emCopy()">' + mi("content_copy") + " " + L("نسخ رابط الكارت", "Copy Card Link") + "</button>" +
-        (hasNfc ? '<button class="bt o" onclick="emWriteNfc()">' + mi("nfc") + " " + L("برمجة كارت NFC مباشرة", "Write to NFC Card") + "</button>" : "") +
+      '<b style="display:block;font-size:15px;margin-bottom:4px">' + L("رابطك الشخصي و QR التلقائي (لكارت الـ NFC والأجهزة بدون NFC)", "Your Personal URL & Automatic QR Code") + "</b>" +
+      '<div class="mu" dir="ltr" style="font-size:13px;font-weight:700;color:var(--bl);margin-bottom:8px">' + esc(shortUrl) + "</div>" +
+      '<div id="emqr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px">' + qr(linkToShow) + "</div>" +
+      '<div class="mu" dir="ltr" style="font-size:11px;word-break:break-all;margin:10px 0;background:var(--sf);padding:8px;border-radius:10px">' + esc(linkToShow) + "</div>" +
+      '<div class="ar" style="justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+        '<button class="bt" type="button" onclick="emCopy()">' + mi("content_copy") + " " + L("نسخ الرابط الشخصي", "Copy Personal Link") + "</button>" +
+        '<button class="bt o" type="button" onclick="window.idcDownloadQrPng()">' + mi("download") + " " + L("تحميل QR كصورة", "Download QR PNG") + "</button>" +
+        (hasNfc ? '<button class="bt o" type="button" onclick="emWriteNfc()">' + mi("nfc") + " " + L("برمجة كارت NFC مباشرة", "Write to NFC Card") + "</button>" : "") +
       "</div>" +
       '<div class="mu" style="font-size:12px;margin-top:10px;line-height:1.7">' +
-      L("• لما الكارت ده يتفتح على موبايلك الشخصي، بيدخل على حسابك علطول من غير باسورد.<br>• ولما يتفتح على أي موبايل تاني (زي موبايل مامتك أو في الطوارئ)، بيفتح شاشة كارتك وفيها «وضع الطوارئ» مفتوح فورًا جنب «الباسورد الخارجي».",
-        "• When scanned on your own signed-in phone, it opens your account directly without a password.<br>• When scanned on any other phone, it shows your Card Screen with 'Emergency Mode' (open without password) right next to 'External Password'.") +
-      "</div></div>";
+      L("• عند فتح رابطك على موبايلك الشخصي، يفتح نسختك وحسابك تلقائيًا.<br>• وعند فتحه أو تغيير الـ ID على أي جهاز آخر، يمنع الـ Authorization Middleware كشف بياناتك ويعرض فقط وضع الطوارئ والباسورد الخارجي.",
+        "• On your own signed-in phone, your link opens your personal dashboard automatically.<br>• On any other device (or if someone changes the URL ID), the Authorization Middleware blocks account access and shows only Emergency Mode & External Password.") +
+      "</div></div>" + stepsHtml;
+  }
+
+  window.idcDownloadQrPng = function () {
+    var linkToEncode = emLink || (window.IDCAuthMiddleware ? window.IDCAuthMiddleware.buildPersonalUrl(currentUserId()) : location.href);
+    var c = document.createElement("canvas");
+    c.width = 520;
+    c.height = 600;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#0f1426";
+    ctx.fillRect(0, 0, 520, 600);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(60, 60, 400, 400);
+    ctx.fillStyle = "#1c2340";
+    var seed = String(linkToEncode), h = 0, n = 11, cell = 320 / n;
+    for (var i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
+        var f = (x < 3 && y < 3) || (x > n - 4 && y < 3) || (x < 3 && y > n - 4);
+        h = (h * 1103515245 + 12345) >>> 0;
+        if (f || (h >>> 16) % 2) {
+          ctx.fillRect(100 + x * cell, 100 + y * cell, Math.ceil(cell), Math.ceil(cell));
+        }
+      }
+    }
+    ctx.fillStyle = "#8ea2f0";
+    ctx.font = "bold 24px Cairo, Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("IDC · " + currentUserId(), 260, 515);
+    ctx.fillStyle = "#98a2c0";
+    ctx.font = "15px monospace";
+    ctx.fillText(String(linkToEncode).slice(0, 44), 260, 555);
+    c.toBlob(function (blob) {
+      if (!blob) return;
+      var u = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = u;
+      a.download = "IDC-QR-" + currentUserId() + ".png";
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
+      tst(L("تم تحميل كود الـ QR بنجاح", "QR Code downloaded"));
+    });
+  };
+
+  if (typeof window.setup === "function") {
+    var _origSetup = window.setup;
+    window.setup = function () {
+      var html = _origSetup();
+      setTimeout(renderQrSvg, 60);
+      return html.replace('<div class="ar">', renderQrAndLinkBox() + '<div class="ar">');
+    };
   }
 
   function emPage() {
@@ -552,13 +644,14 @@
   };
 
   window.emCopy = function () {
-    if (!emLink) return;
+    var linkToCopy = emLink || (window.IDCAuthMiddleware ? window.IDCAuthMiddleware.buildPersonalUrl(currentUserId()) : "");
+    if (!linkToCopy) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(emLink).then(function () {
+      navigator.clipboard.writeText(linkToCopy).then(function () {
         tst(L("تم نسخ رابط الكارت لبرمجة الـ NFC", "Card link copied for NFC programming"));
       });
     } else {
-      tst(emLink);
+      tst(linkToCopy);
     }
   };
 

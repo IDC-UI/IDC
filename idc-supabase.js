@@ -332,6 +332,65 @@
 
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  function deriveDefaultRouteId(uid) {
+    var s = String(uid || "");
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return String(1000 + (h % 9000));
+  }
+
+  window.IDCAuthMiddleware = {
+    getOwnerRouteId: function () {
+      if (S.routeId && /^[a-z0-9_-]{3,24}$/i.test(String(S.routeId))) return String(S.routeId).toLowerCase();
+      if (S.p && S.p.routeId && /^[a-z0-9_-]{3,24}$/i.test(String(S.p.routeId))) {
+        S.routeId = String(S.p.routeId).toLowerCase();
+        return S.routeId;
+      }
+      if (currentUser && currentUser.id) {
+        S.routeId = deriveDefaultRouteId(currentUser.id);
+        return S.routeId;
+      }
+      if (S.sid) return String(S.sid);
+      return "1111";
+    },
+    buildPersonalUrl: function (customRouteId) {
+      var rid = String(customRouteId || this.getOwnerRouteId()).toLowerCase();
+      var base = (location.origin || "https://idc-ui.github.io") + (location.pathname || "/IDC/").replace(/\/[A-Za-z0-9_-]{3,24}\/?$/, "/").replace(/\/?$/, "/");
+      return base + encodeURIComponent(rid);
+    },
+    authorizeRoute: async function (requestedRouteId) {
+      var reqId = String(requestedRouteId || "").trim().toLowerCase();
+      if (!/^[a-z0-9_-]{3,24}$/.test(reqId)) {
+        return { authorized: false, status: 400, role: "invalid_route", route_id: reqId };
+      }
+      var isSignedInOwner = Boolean((currentUser && vaultKey) || (S.user && !S.preview));
+      var ownerRouteId = isSignedInOwner ? this.getOwnerRouteId() : null;
+      var ownerUid = currentUser && currentUser.id ? String(currentUser.id).toLowerCase() : (S.user ? String(S.user).toLowerCase() : null);
+      var ownerEmail = S.userEmail ? String(S.userEmail).toLowerCase() : null;
+
+      if (isSignedInOwner && (reqId === ownerRouteId || reqId === ownerUid || reqId === ownerEmail || reqId === "idc-" + ownerRouteId)) {
+        return {
+          authorized: true,
+          status: 200,
+          role: "owner",
+          route_id: reqId
+        };
+      }
+
+      // Anti-IDOR Guard: caller requested a routeId that does NOT match their authenticated session!
+      return {
+        authorized: false,
+        status: 403,
+        role: "visitor_idor_blocked",
+        route_id: reqId,
+        message: "حماية IDC Authorization Middleware (403): هذا الرابط يخص حسابًا آخر — تم حظر الوصول لمنع كشف البيانات."
+      };
+    }
+  };
+
   function applyVaultToState(vault, user) {
     if (!user || !UUID_RE.test(String(user.id))) throw new Error("Invalid user");
     var defaultName = (user.user_metadata && user.user_metadata.display_name) || (user.email ? user.email.split("@")[0] : "مستخدم");
@@ -342,6 +401,7 @@
     S.uname = defaultName;
     S.pOwner = user.id;
     S.p = vault.p || { n: defaultName, nid: "", bd: "", ph: "", ct: "", role: "student" };
+    S.routeId = (S.p && S.p.routeId) || deriveDefaultRouteId(user.id);
     S.items = Array.isArray(vault.items) ? vault.items : [];
     S.sec = vault.sec || S.sec;
     S.log = Array.isArray(vault.log) ? vault.log : [];

@@ -56,6 +56,19 @@ const allUiSrc = html + supa + read("idc-plus.js") + read("idc-private.js") + se
 const femRe = /ابدئي|سجّلي|سجلي|افتحي|اكتبي|أدخلي|ادخلي|تحققي|جرّبي|جربي|اختاري|أضيفي|ضيفي|(?:^|\s|")فعّلي|حاولي|تأكدي|اتأكدي|أكدي|أكديه|أنتِ|محتاجة|مش عارفة|كلمينا|لا تشاركيه|تقدري|تقدرين|حدديه|تحدديه|بتدخلي|تكمليه|أنشئي|اطلبي|تجاوزتي|استني|ارفعي|رتّبي|اجمعي|شاركي|صدّري|دوسي|قوليه|كلمي|شيلي|بلّغي|املي|كمّلي|تطلعي|تخرجي|تعدّلي|قلّلي|قرّبي|انسخي|حطي|سيبيه|تحسي\s|تدوسي|تحذفي|عايزاها|معاكي|بتعرفيها|صاحبة الكارت|بتفتحيه|تبلّغ عن|متأكدة؟|تحتاجيها/;
 const femMatch = allUiSrc.match(femRe);
 check("S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)", !femMatch, femMatch ? "Found: " + femMatch[0] : "");
+const sqlRoutes = fs.existsSync(path.join(ROOT, "supabase/migrations/20261122010000_idc_user_routes.sql"))
+  ? read("supabase/migrations/20261122010000_idc_user_routes.sql")
+  : "";
+check("S24 User routes table enforces RLS, (select auth.uid()) initPlan, and revokes direct anon/public SELECT", /create table if not exists public\.idc_user_routes/.test(sqlRoutes) && /enable row level security/.test(sqlRoutes) && /\(select auth\.uid\(\)\)/.test(sqlRoutes) && /revoke all on table public\.idc_user_routes from public, anon/.test(sqlRoutes));
+const authRouteFn = fs.existsSync(path.join(ROOT, "supabase/functions/authorize-route/index.ts"))
+  ? read("supabase/functions/authorize-route/index.ts")
+  : "";
+check("S25 authorize-route Edge Function middleware verifies JWT, enforces rate limiting, and blocks IDOR access", /supabase-js@2\.118\.0"/.test(authRouteFn) && /auth\.getUser/.test(authRouteFn) && /withinRateLimit/.test(authRouteFn) && /visitor_idor_blocked/.test(authRouteFn));
+const router404 = fs.existsSync(path.join(ROOT, "404.html")) ? read("404.html") : "";
+const plusSrc = read("idc-plus.js");
+check("S26 Clean URL router (404.html + IDCAuthMiddleware) resolves /IDC/<id> and enforces anti-IDOR authorization", /idc_requested_route/.test(router404) && /IDCAuthMiddleware/.test(plusSrc + supa));
+check("S27 First-time setup & NFC studio auto-generate personal URL + QR code and render step-by-step NFC programming guide", /دليل برمجة كارت الـ NFC خطوة بخطوة/.test(plusSrc + html) && /NFC Tools/.test(plusSrc + html));
+check("S28 LinkedIn, custom user links, and Bank Accounts (IBAN / InstaPay) are supported across profile and vault", /linkedin/.test(html + plusSrc) && /bank:\s*"حساب بنكي"/.test(html + plusSrc) && /IBAN|InstaPay/.test(html + plusSrc + settingsSrc));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
@@ -223,6 +236,24 @@ let savedBody;
   check("T8  page reload with a stored Supabase session shows the lock screen (key not recoverable)", /المحفظة مقفولة/.test(t.app.innerHTML), t.app.innerHTML.slice(0, 60));
   t.handlers.forEach((cb) => cb("SIGNED_OUT", null));
   check("T8b sign-out in another tab wipes in-memory state", t.ctx.S.items.length === 0 && t.ctx.S.user === null && t.ctx.S.screen === "auth");
+}
+
+// T9: Anti-IDOR Authorization Middleware prevents URL ID tampering (/IDC/1111 -> /IDC/2222)
+{
+  const t = boot();
+  Object.assign(t.form, { lg: "maria@example.com", lp: GOOD_PW });
+  await t.ctx.doLogin();
+  await tick();
+  const hasMiddleware = Boolean(t.ctx.IDCAuthMiddleware && typeof t.ctx.IDCAuthMiddleware.authorizeRoute === "function");
+  let ownRes = null, foreignRes = null;
+  if (hasMiddleware) {
+    t.ctx.S.routeId = "1111";
+    ownRes = await t.ctx.IDCAuthMiddleware.authorizeRoute("1111");
+    foreignRes = await t.ctx.IDCAuthMiddleware.authorizeRoute("2222");
+  }
+  check("T9a owner accessing their own route (/IDC/1111) is authorized as owner", Boolean(ownRes && ownRes.authorized === true && ownRes.role === "owner"));
+  check("T9b changing URL ID to another user's route (/IDC/2222) is blocked by IDOR middleware (403)", Boolean(foreignRes && foreignRes.authorized === false && foreignRes.status === 403 && foreignRes.role === "visitor_idor_blocked"));
+  check("T9c blocked IDOR attempt never leaks the current user's vault or grants owner access to route 2222", Boolean(foreignRes && !foreignRes.vault && t.ctx.S.routeId === "1111"));
 }
 
 /* ---------------------------------------------------------------- summary */
