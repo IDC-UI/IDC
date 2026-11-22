@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-15T19:48:53.056Z",
-  "passed": 44,
-  "total": 44,
+  "at": "2026-11-22T15:05:16.587Z",
+  "passed": 47,
+  "total": 47,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -95,6 +95,21 @@
     },
     {
       "name": "S19 no secret/service-role keys or JWTs in shipped files (only the public publishable key)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S20 Postgres best-practices migration adds indexes and initPlan-cached auth.uid()",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S21 client caches public emergency storage and parallelizes independent async work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule",
       "ok": true,
       "detail": ""
     },

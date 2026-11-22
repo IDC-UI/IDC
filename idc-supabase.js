@@ -158,6 +158,7 @@
 
   var PUBLIC_EM_KEY = "idc_public_em_v1";
   var outerLockTab = "unlock";
+  var memEmergencyCache = undefined;
 
   function syncPublicEmergencyCache(emObj, pObj) {
     try {
@@ -175,15 +176,20 @@
         nt: String((em && em.nt) || "").slice(0, 500)
       };
       if (safeEm.bt || safeEm.al || safeEm.ch || safeEm.md || safeEm.c1 || safeEm.c2 || safeEm.nt) {
+        memEmergencyCache = safeEm;
         localStorage.setItem(PUBLIC_EM_KEY, JSON.stringify(safeEm));
       }
     } catch (e) {}
   }
 
   function loadPublicEmergencyCache() {
+    if (memEmergencyCache !== undefined && memEmergencyCache !== null) return memEmergencyCache;
     try {
       var raw = localStorage.getItem(PUBLIC_EM_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        memEmergencyCache = JSON.parse(raw);
+        return memEmergencyCache;
+      }
     } catch (e) {}
     if (typeof S !== "undefined" && S.em) return S.em;
     return null;
@@ -355,19 +361,18 @@
   }
 
   async function loadVault(password, user, isNewSignup) {
-    var remoteRow = null;
-    if (client && !String(user.id).startsWith("local_")) {
-      try {
-        var result = await client.from("idc_vaults")
-          .select("salt,ciphertext")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!result.error && result.data) remoteRow = result.data;
-      } catch (e) {}
-    }
-
-    var localRow = getLocalVault(user.email);
-    if (localRow && localRow.user_id !== user.id) localRow = null;
+    var canFetchRemote = Boolean(client && !String(user.id).startsWith("local_"));
+    var remotePromise = canFetchRemote
+      ? client.from("idc_vaults").select("salt,ciphertext").eq("user_id", user.id).maybeSingle().catch(function () { return null; })
+      : Promise.resolve(null);
+    var localPromise = Promise.resolve().then(function () {
+      var row = getLocalVault(user.email);
+      return row && row.user_id === user.id ? row : null;
+    });
+    var pair = await Promise.all([remotePromise, localPromise]);
+    var remoteResult = pair[0];
+    var remoteRow = remoteResult && !remoteResult.error && remoteResult.data ? remoteResult.data : null;
+    var localRow = pair[1];
     var sourceRow = remoteRow || localRow;
     var vault = null;
 

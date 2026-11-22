@@ -45,6 +45,13 @@ check("S18 no admin routes / pages / debug flags exist", !/(admin(\.html|\/|pane
 const secretHit = ["index.html", "idc-supabase.js", "idc-plus.js", "idc-private.js", "idc-settings.js", "supabase-config.js", "supabase/functions/secure-vault/index.ts", "supabase/functions/secure-upload/index.ts"]
   .some((f) => /service_role|sk_live|BEGIN (RSA|EC|PRIVATE)|[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/.test(read(f)));
 check("S19 no secret/service-role keys or JWTs in shipped files (only the public publishable key)", !secretHit);
+const sqlOpt = fs.existsSync(path.join(ROOT, "supabase/migrations/20261122000000_idc_postgres_optimizations.sql"))
+  ? read("supabase/migrations/20261122000000_idc_postgres_optimizations.sql")
+  : "";
+check("S20 Postgres best-practices migration adds indexes and initPlan-cached auth.uid()", /create index if not exists idx_idc_rate_limits_window/.test(sqlOpt) && /create index if not exists idx_idc_vaults_updated_at/.test(sqlOpt) && /\(select auth\.uid\(\)\)/.test(sqlOpt));
+check("S21 client caches public emergency storage and parallelizes independent async work", /memEmergencyCache/.test(supa) && /Promise\.all/.test(supa));
+const settingsSrc = read("idc-settings.js");
+check("S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule", /@media \(prefers-color-scheme:light\)/.test(settingsSrc) && /\.idc-st :focus-visible/.test(settingsSrc) && /@media \(prefers-reduced-motion:reduce\)/.test(settingsSrc));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
