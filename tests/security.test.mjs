@@ -52,6 +52,10 @@ check("S20 Postgres best-practices migration adds indexes and initPlan-cached au
 check("S21 client caches public emergency storage and parallelizes independent async work", /memEmergencyCache/.test(supa) && /Promise\.all/.test(supa));
 const settingsSrc = read("idc-settings.js");
 check("S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule", /@media \(prefers-color-scheme:light\)/.test(settingsSrc) && /\.idc-st :focus-visible/.test(settingsSrc) && /@media \(prefers-reduced-motion:reduce\)/.test(settingsSrc));
+const allUiSrc = html + supa + read("idc-plus.js") + read("idc-private.js") + settingsSrc + read("idc-intro.js");
+const femRe = /ابدئي|سجّلي|سجلي|افتحي|اكتبي|أدخلي|ادخلي|تحققي|جرّبي|جربي|اختاري|أضيفي|ضيفي|(?:^|\s|")فعّلي|حاولي|تأكدي|اتأكدي|أكدي|أكديه|أنتِ|محتاجة|مش عارفة|كلمينا|لا تشاركيه|تقدري|تقدرين|حدديه|تحدديه|بتدخلي|تكمليه|أنشئي|اطلبي|تجاوزتي|استني|ارفعي|رتّبي|اجمعي|شاركي|صدّري|دوسي|قوليه|كلمي|شيلي|بلّغي|املي|كمّلي|تطلعي|تخرجي|تعدّلي|قلّلي|قرّبي|انسخي|حطي|سيبيه|تحسي\s|تدوسي|تحذفي|عايزاها|معاكي|بتعرفيها|صاحبة الكارت|بتفتحيه|تبلّغ عن|متأكدة؟|تحتاجيها/;
+const femMatch = allUiSrc.match(femRe);
+check("S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)", !femMatch, femMatch ? "Found: " + femMatch[0] : "");
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
@@ -209,7 +213,7 @@ let savedBody;
   const t = boot({ signIn: () => ({ data: null, error: { message: "Invalid login credentials" } }) });
   Object.assign(t.form, { lg: "maria@example.com", lp: "wrong-password-1" });
   for (let i = 0; i < 8; i++) await t.ctx.doLogin();
-  check("T7  after 5 bad logins the client stops calling the API (back-off active)", t.calls.signIn === 5 && /جرّبي بعد/.test(t.ctx.err), "signIn calls=" + t.calls.signIn);
+  check("T7  after 5 bad logins the client stops calling the API (back-off active)", t.calls.signIn === 5 && /جرّب بعد/.test(t.ctx.err), "signIn calls=" + t.calls.signIn);
 }
 
 // T8: reload with a live Supabase session lands on the lock screen, vault stays sealed

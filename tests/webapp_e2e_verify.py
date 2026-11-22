@@ -159,10 +159,10 @@ def run_http_and_dom_suite(port):
     // 3. Inner Home hides Emergency & Private setup prompts once filled
     ctx.idcSetOuterTab('unlock');
     ctx.loadSample();
-    ctx.S.em = { n: 'ماريا إبراهيم', bt: 'O+', al: 'البنسلين', ch: 'لا يوجد', md: 'لا يوجد', c1: 'سلمى', c2: '+201558540330', nt: 'اتصلوا فورًا' };
+    ctx.S.em = { n: 'نور محمد', bt: 'O+', al: 'البنسلين', ch: 'لا يوجد', md: 'لا يوجد', c1: 'سلمى', c2: '+201558540330', nt: 'اتصلوا فورًا' };
     ctx.S.pv = { ct: 'sealed_demo_ciphertext' };
     ctx.R();
-    if (appEl.innerHTML.includes('اضغطي لإدخال بيانات الطوارئ') || appEl.innerHTML.includes('اضغطي لتفعيل الـ 3 باسوردات')) {
+    if (appEl.innerHTML.includes('اضغط لإدخال بيانات الطوارئ') || appEl.innerHTML.includes('اضغط لتفعيل الـ 3 باسوردات')) {
       throw new Error('Check 3 failed: Inner Home still showed setup prompts after filling data');
     }
     console.log('PASS  [E2E 3/5] Inner Home hides setup prompts once Emergency & Private data are filled');

@@ -33,12 +33,12 @@
 
   function markup() {
     var english = '<p class="idc-intro-en">Made to know you, built to protect you.</p><p class="idc-intro-en">Your identity, ready when you need it.</p>';
-    var arabic = '<p class="idc-intro-ar" dir="rtl">اتعمل عشان يعرفك، واتبنى عشان يحميك</p><p class="idc-intro-ar" dir="rtl">هويتك ووثائقك جاهزة وقت ما تحتاجيها</p>';
+    var arabic = '<p class="idc-intro-ar" dir="rtl">اتعمل عشان يعرفك، واتبنى عشان يحميك</p><p class="idc-intro-ar" dir="rtl">هويتك ووثائقك جاهزة وقت ما تحتاجها</p>';
     return '<section class="idc-intro" id="idc-first-intro" data-ui="' + currentLanguage + '" lang="' + currentLanguage + '" dir="' + (currentLanguage === "ar" ? "rtl" : "ltr") + '" aria-label="IDC welcome">' +
       '<div class="language" role="group" aria-label="Language"><button type="button" data-language="ar" aria-pressed="' + (currentLanguage === "ar") + '" onclick="window.idcIntroSetLanguage(\'ar\')">عربي</button><button type="button" data-language="en" aria-pressed="' + (currentLanguage === "en") + '" onclick="window.idcIntroSetLanguage(\'en\')">EN</button></div>' +
       '<div class="idc-intro-stage" id="idc-intro-stage">' + iconMarkup() + '</div>' +
       '<div class="idc-intro-tag">' + english + arabic + '</div>' +
-      '<div class="idc-intro-actions"><button type="button" onclick="window.idcIntroChoose(\'signup\')">' + (currentLanguage === "ar" ? "ابدئي الآن" : "Get started") + '</button><button type="button" class="secondary" onclick="window.idcIntroChoose(\'login\')">' + (currentLanguage === "ar" ? "لديّ حساب" : "I have an account") + '</button><button type="button" class="preview" onclick="window.idcIntroChoose(\'preview\')">' + (currentLanguage === "ar" ? "معاينة بدون تسجيل" : "Preview without signing in") + '</button></div>' +
+      '<div class="idc-intro-actions"><button type="button" onclick="window.idcIntroChoose(\'signup\')">' + (currentLanguage === "ar" ? "ابدأ الآن" : "Get started") + '</button><button type="button" class="secondary" onclick="window.idcIntroChoose(\'login\')">' + (currentLanguage === "ar" ? "لديّ حساب" : "I have an account") + '</button><button type="button" class="preview" onclick="window.idcIntroChoose(\'preview\')">' + (currentLanguage === "ar" ? "معاينة بدون تسجيل" : "Preview without signing in") + '</button></div>' +
       '<button class="replay" type="button" aria-label="Replay intro" onclick="window.idcIntroReplay()">' + (currentLanguage === "ar" ? "إعادة" : "Replay") + '</button></section>';
   }
 
@@ -66,7 +66,7 @@
         button.setAttribute("aria-pressed", String(button.dataset.language === currentLanguage));
       });
       var actions = intro.querySelector(".idc-intro-actions");
-      actions.children[0].textContent = currentLanguage === "ar" ? "ابدئي الآن" : "Get started";
+      actions.children[0].textContent = currentLanguage === "ar" ? "ابدأ الآن" : "Get started";
       actions.children[1].textContent = currentLanguage === "ar" ? "لديّ حساب" : "I have an account";
       actions.children[2].textContent = currentLanguage === "ar" ? "معاينة بدون تسجيل" : "Preview without signing in";
       intro.querySelector(".replay").textContent = currentLanguage === "ar" ? "إعادة" : "Replay";

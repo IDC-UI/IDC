@@ -39,7 +39,7 @@
         [en ? "Smart NFC Card & Emergency Partition" : "حماية كارت الـ NFC ووضع الطوارئ", en ? "Emergency details open without a password to save lives; public card requires External Password while Private data stays locked." : "وضع الطوارئ يفتح فورًا للإنقاذ بدون باسورد، وبيانات الكارت محمية بالباسورد الخارجي بينما تظل البيانات الخاصة مقفولة."],
         [en ? "Database Isolation (RLS & Rate Limiting)" : "عزل قواعد البيانات (Supabase RLS & Rate Limiting)", en ? "Row-Level Security, encrypted file envelopes, strict CORS allow-list, and brute-force rate limiting." : "صلاحيات صف بصف (RLS)، تشفير المرفقات قبل الرفع، وحماية ضد المحاولات المتكررة."]
       ];
-      var bioCard = '<div class="cd it" style="margin-bottom:12px;--c:var(--bl)"><div class="ic">' + mi("fingerprint") + '</div><div class="g"><b style="font-weight:700">' + (en ? "Outer App Fingerprint / Face ID" : "البصمة / Face ID للدخول من برا") + '</b><div class="mu" style="font-size:12px">' + (en ? "Register your device fingerprint or Face ID to unlock the app directly from the outer screen." : "سجّلي بصمة موبايلك أو Face ID لفتح التطبيق مباشرة من الشاشة الخارجية بدون كتابة الباسورد كل مرة.") + '</div></div><button class="bt" style="height:36px;padding:0 14px" onclick="window.idcOuterBioRegister()">' + (en ? "Register Biometrics" : "تسجيل البصمة") + "</button></div>";
+      var bioCard = '<div class="cd it" style="margin-bottom:12px;--c:var(--bl)"><div class="ic">' + mi("fingerprint") + '</div><div class="g"><b style="font-weight:700">' + (en ? "Outer App Fingerprint / Face ID" : "البصمة / Face ID للدخول من برا") + '</b><div class="mu" style="font-size:12px">' + (en ? "Register your device fingerprint or Face ID to unlock the app directly from the outer screen." : "سجّل بصمة موبايلك أو Face ID لفتح التطبيق مباشرة من الشاشة الخارجية بدون كتابة الباسورد كل مرة.") + '</div></div><button class="bt" style="height:36px;padding:0 14px" onclick="window.idcOuterBioRegister()">' + (en ? "Register Biometrics" : "تسجيل البصمة") + "</button></div>";
       var rows = layers.map(function (l) {
         return '<div class="rw" style="align-items:flex-start;gap:10px"><div><b style="font-weight:600;display:block">' + esc(l[0]) + '</b><div class="mu" style="font-size:12px;margin-top:2px">' + esc(l[1]) + '</div></div><span class="ch ok" style="margin:0;flex:none">' + (en ? "✓ Active" : "✓ فعّال") + "</span></div>";
       }).join("");
@@ -109,7 +109,7 @@
 
   function backendRequired() {
     if (!client) {
-      setError("إعداد Supabase غير مكتمل. أضيفي Project URL والمفتاح العام في supabase-config.js.");
+      setError("إعداد Supabase غير مكتمل. أضف Project URL والمفتاح العام في supabase-config.js.");
       return false;
     }
     return true;
@@ -117,11 +117,11 @@
 
   function appError(error) {
     var message = String(error && (error.message || error.code) || "");
-    if (/email not confirmed/i.test(message)) return "أكدي بريدك الإلكتروني من الرابط المرسل ثم سجّلي الدخول.";
+    if (/email not confirmed/i.test(message)) return "أكّد بريدك الإلكتروني من الرابط المرسل ثم سجّل الدخول.";
     if (/invalid login credentials/i.test(message)) return "البريد أو كلمة المرور غير صحيحة.";
-    if (/already registered|user already registered/i.test(message)) return "هذا البريد مسجل بالفعل. سجّلي الدخول.";
+    if (/already registered|user already registered/i.test(message)) return "هذا البريد مسجل بالفعل. سجّل الدخول.";
     if (/password should be at least/i.test(message)) return "كلمة المرور أقصر من الحد المطلوب.";
-    return "تعذر إكمال الطلب. تحققي من البيانات وحاولي مرة أخرى.";
+    return "تعذر إكمال الطلب. تحقق من البيانات وحاول مرة أخرى.";
   }
 
   function isSafeVault(value) {
@@ -322,7 +322,7 @@
     if (!S.preview) {
       if (currentUser && vaultKey) {
         persistVault().catch(function () {
-          tst("تعذر حفظ البيانات المشفرة؛ تحققي من الاتصال ثم أعيدي المحاولة.");
+          tst("تعذر حفظ البيانات المشفرة؛ تحقق من الاتصال ثم أعد المحاولة.");
         });
       }
       return;
@@ -426,10 +426,10 @@
   var COMMON_PASSWORDS = ["password1234", "123456789012", "qwertyuiop12", "iloveyou1234", "administrator", "welcome12345"];
   function passwordProblem(password, email) {
     password = String(password || "");
-    if (password.length < MIN_PASSWORD) return "اختاري كلمة مرور من 12 حرفًا على الأقل.";
+    if (password.length < MIN_PASSWORD) return "اختر كلمة مرور من 12 حرفًا على الأقل.";
     if (password.length > 128) return "كلمة المرور طويلة جدًا (الحد الأقصى 128 حرفًا).";
     if (!(/[A-Za-z\u0600-\u06FF]/.test(password) && /\d/.test(password))) return "كلمة المرور لازم تحتوي على حروف وأرقام.";
-    if (/^(.)\1+$/.test(password) || COMMON_PASSWORDS.indexOf(password.toLowerCase()) >= 0) return "كلمة المرور دي سهلة التخمين. اختاري غيرها.";
+    if (/^(.)\1+$/.test(password) || COMMON_PASSWORDS.indexOf(password.toLowerCase()) >= 0) return "كلمة المرور دي سهلة التخمين. اختر غيرها.";
     var local = String(email || "").split("@")[0].toLowerCase();
     if (local.length >= 4 && password.toLowerCase().indexOf(local) >= 0) return "كلمة المرور ما ينفعش تحتوي على جزء من بريدك.";
     return "";
@@ -462,7 +462,7 @@
     var name = v("nm");
     var email = v("em").toLowerCase();
     var password = v("pw");
-    if (!name || name.length > 100 || !emailValid(email)) return setError("اكتبي اسمًا وبريدًا إلكترونيًا صحيحًا.");
+    if (!name || name.length > 100 || !emailValid(email)) return setError("يرجى إدخال اسم وبريد إلكتروني صحيح.");
     var problem = passwordProblem(password, email);
     if (problem) return setError(problem);
     if (password !== v("pw2")) return setError("كلمتا المرور غير متطابقتين.");
@@ -479,11 +479,11 @@
         }
       });
     } catch (e) {
-      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
+      return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
     }
     if (result.error) return setError(appError(result.error));
     var supaUser = result.data && result.data.user;
-    if (!supaUser) return setError("تعذر إكمال الطلب. حاولي مرة أخرى.");
+    if (!supaUser) return setError("تعذر إكمال الطلب. حاول مرة أخرى.");
 
     // Email confirmation is mandatory: no session means the address is not confirmed yet,
     // so no vault is opened and no account exists only on this device.
@@ -491,7 +491,7 @@
       au = { m: "login", d: { lg: email } };
       err = "";
       R();
-      tst("بعتنالك رابط تأكيد على بريدك. أكديه وبعدين سجّلي الدخول.");
+      tst("بعتنالك رابط تأكيد على بريدك. أكّده ثم سجّل الدخول.");
       return;
     }
 
@@ -500,7 +500,7 @@
       await loadVault(password, supaUser, true);
       tst("تم إنشاء الحساب وفتح المحفظة المشفرة بنجاح");
     } catch (e) {
-      setError("تعذر إنشاء المحفظة المشفرة. حاولي مرة أخرى.");
+      setError("تعذر إنشاء المحفظة المشفرة. حاول مرة أخرى.");
     }
   };
 
@@ -508,16 +508,16 @@
     if (!backendRequired()) return;
     var email = v("lg").toLowerCase();
     var password = v("lp");
-    if (!emailValid(email) || !password) return setError("اكتبي بريدًا صحيحًا وكلمة المرور.");
+    if (!emailValid(email) || !password) return setError("يرجى إدخال بريد صحيح وكلمة المرور.");
     var wait = throttleLeft();
-    if (wait) return setError("محاولات كتير. جرّبي بعد " + wait + " ثانية.");
+    if (wait) return setError("محاولات كتير. جرّب بعد " + wait + " ثانية.");
 
     err = "";
     var result;
     try {
       result = await client.auth.signInWithPassword({ email: email, password: password });
     } catch (e) {
-      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
+      return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
     }
     if (result.error || !result.data || !result.data.user) {
       throttleFail();
@@ -543,7 +543,7 @@
   window.doF1 = async function () {
     if (!backendRequired()) return;
     var email = v("fp").toLowerCase();
-    if (!emailValid(email)) return setError("اكتبي بريدًا إلكترونيًا صحيحًا.");
+    if (!emailValid(email)) return setError("يرجى إدخال بريد إلكتروني صحيح.");
     var result = await client.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname
     });
@@ -558,14 +558,14 @@
   };
 
   window.doF3 = async function () {
-    if (!backendRequired() || !recoveryPending) return setError("ابدئي الاستعادة من رابط البريد المرسل بواسطة Supabase.");
+    if (!backendRequired() || !recoveryPending) return setError("ابدأ الاستعادة من رابط البريد المرسل بواسطة Supabase.");
     var password = v("np");
     var newProblem = passwordProblem(password, "");
     if (newProblem) return setError(newProblem);
     if (password !== v("np2")) return setError("كلمتا المرور غير متطابقتين.");
 
     var userResult = await client.auth.getUser();
-    if (userResult.error || !userResult.data.user) return setError("انتهت صلاحية رابط الاستعادة. اطلبي رابطًا جديدًا.");
+    if (userResult.error || !userResult.data.user) return setError("انتهت صلاحية رابط الاستعادة. اطلب رابطًا جديدًا.");
     var saved = await client.from("idc_vaults")
       .select("salt,ciphertext")
       .eq("user_id", userResult.data.user.id)
@@ -626,7 +626,7 @@
   async function encryptFile(file) {
     if (!currentUser || !vaultKey) throw new Error("Sign in before uploading");
     if (!(file.type === "application/pdf" || /^image\/(jpeg|png|webp)$/.test(file.type))) {
-      throw new Error("اختاري PDF أو صورة JPG/PNG/WEBP فقط.");
+      throw new Error("اختر PDF أو صورة JPG/PNG/WEBP فقط.");
     }
     if (file.size < 1 || file.size > 5 * 1024 * 1024) throw new Error("حجم الملف يجب ألا يتجاوز 5MB.");
 
@@ -681,7 +681,7 @@
     if (S.preview) return localPickAtt(input);
     if (!currentUser || !vaultKey) {
       input.value = "";
-      return tst("سجّلي الدخول أولًا قبل رفع المرفقات.");
+      return tst("سجّل الدخول أولًا قبل رفع المرفقات.");
     }
     try {
       var attachment = await encryptFile(file);
@@ -695,7 +695,7 @@
   };
 
   async function downloadEncrypted(path) {
-    if (!client || !currentUser || !vaultKey) throw new Error("سجّلي الدخول أولًا");
+    if (!client || !currentUser || !vaultKey) throw new Error("سجّل الدخول أولًا");
     if (typeof path !== "string" || !path.startsWith(currentUser.id + "/")) throw new Error("مسار ملف غير صالح");
     var response = await client.storage.from("idc-vault").download(path);
     if (response.error || !response.data) throw new Error("تعذر تنزيل الملف المشفر");
@@ -818,7 +818,7 @@
 
   window.idcOuterBioRegister = async function (silent) {
     if (!currentUser || !vaultKey || !vaultSalt) {
-      if (!silent) tst(S.lang === "en" ? "Sign in with your password first to register biometrics." : "سجّلي الدخول بكلمة المرور أولًا لتفعيل البصمة.");
+      if (!silent) tst(S.lang === "en" ? "Sign in with your password first to register biometrics." : "سجّل الدخول بكلمة المرور أولًا لتفعيل البصمة.");
       return false;
     }
     if (!window.PublicKeyCredential || !navigator.credentials) {
@@ -873,7 +873,7 @@
     try {
       var rec = await loadOuterBioRecord("default");
       if (!rec || !rec.credId || !rec.wrapKey) {
-        return setError(S.lang === "en" ? "Sign in once with your password (with 'Enable Biometrics' checked) to register your Fingerprint / Face ID first." : "ادخلي أول مرة بكلمة المرور (مع تفعيل خيار البصمة) عشان تتسجل بصمتك / Face ID على الجهاز ده.");
+        return setError(S.lang === "en" ? "Sign in once with your password (with 'Enable Biometrics' checked) to register your Fingerprint / Face ID first." : "سجّل الدخول أول مرة بكلمة المرور (مع تفعيل خيار البصمة) عشان تتسجل بصمتك / Face ID على الجهاز ده.");
       }
       var challenge = crypto.getRandomValues(new Uint8Array(32));
       var assertion = await navigator.credentials.get({
@@ -903,7 +903,7 @@
       var localRow = getLocalVault(userObj.email);
       var sourceRow = remoteRow || localRow;
       if (!sourceRow || !sourceRow.ciphertext) {
-        return setError(S.lang === "en" ? "Please sign in with your email and password first." : "سجّلي الدخول بالبريد وكلمة المرور أول مرة.");
+        return setError(S.lang === "en" ? "Please sign in with your email and password first." : "سجّل الدخول بالبريد وكلمة المرور أول مرة.");
       }
       var vault = await window.IDCrypto.dec(sourceRow.ciphertext, restoredKey);
       if (!isSafeVault(vault)) throw new Error("invalid_vault");
@@ -914,7 +914,7 @@
       go({ screen: "home", nav: "home" });
       tst(S.lang === "en" ? "Unlocked with Fingerprint / Face ID ✓" : "تم فتح التطبيق بالبصمة / Face ID ✓");
     } catch (e) {
-      setError(S.lang === "en" ? "Biometric verification was cancelled or failed. Use your password or try again." : "لم تكتمل البصمة / Face ID. حاولي تاني أو ادخلي بكلمة المرور.");
+      setError(S.lang === "en" ? "Biometric verification was cancelled or failed. Use your password or try again." : "لم تكتمل البصمة / Face ID. حاول مرة أخرى أو أدخل كلمة المرور.");
     }
   };
 
@@ -928,7 +928,7 @@
         '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
         '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
         '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button>');
-    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتحي بالبصمة / Face ID أو استخدمي وضع الطوارئ.</div>' +
+    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتح بالبصمة / Face ID أو استخدمي وضع الطوارئ.</div>' +
       window.idcOuterPartitionsBarHtml() +
       body +
       '</div>';
@@ -936,7 +936,7 @@
 
   async function unlockWith(email, password) {
     if (!backendRequired()) return;
-    if (!emailValid(email) || password.length < 6) return setError("أدخلي البريد وكلمة المرور الصحيحة.");
+    if (!emailValid(email) || password.length < 6) return setError("يرجى إدخال البريد وكلمة المرور الصحيحة.");
     var wantBio = Boolean(document.getElementById("regOuterBio") && document.getElementById("regOuterBio").checked);
     await window.doLoginWithValues(email, password);
     if (wantBio && currentUser && vaultKey) {
@@ -946,16 +946,16 @@
 
   window.doLoginWithValues = async function (email, password) {
     var wait = throttleLeft();
-    if (wait) return setError("محاولات كتير. جرّبي بعد " + wait + " ثانية.");
+    if (wait) return setError("محاولات كتير. جرّب بعد " + wait + " ثانية.");
     var result;
     try {
       result = await client.auth.signInWithPassword({ email: email, password: password });
     } catch (e) {
-      return setError("تعذر الاتصال. تحققي من الإنترنت وحاولي مرة أخرى.");
+      return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
     }
     if (result.error || !result.data || !result.data.user) {
       throttleFail();
-      return setError("تعذر فك المحفظة. تأكدي من البريد وكلمة المرور.");
+      return setError("تعذر فك المحفظة. تأكد من البريد وكلمة المرور.");
     }
     try {
       await loadVault(password, result.data.user, false);
@@ -965,7 +965,7 @@
       vaultKey = null;
       vaultSalt = null;
       throttleFail();
-      setError("تعذر فك المحفظة. تأكدي من كلمة المرور الصحيحة.");
+      setError("تعذر فك المحفظة. تأكد من كلمة المرور الصحيحة.");
     }
   };
 
@@ -978,7 +978,7 @@
   };
 
   window.psave = async function () {
-    if (!currentUser || !vaultKey) return setError("سجّلي الدخول لفتح المحفظة قبل حفظ بياناتك.");
+    if (!currentUser || !vaultKey) return setError("سجّل الدخول لفتح المحفظة قبل حفظ بياناتك.");
     var profile = {
       n: v("n"),
       nid: v("nid"),
@@ -988,7 +988,7 @@
       role: v("rl") || "student"
     };
     if (!profile.n || profile.n.length > 100) {
-      err = "اكتبي اسمًا صحيحًا لا يتجاوز 100 حرف.";
+      err = "يرجى إدخال اسم صحيح لا يتجاوز 100 حرف.";
       var nameError = document.querySelector("#app .err");
       if (nameError) nameError.textContent = err;
       return;

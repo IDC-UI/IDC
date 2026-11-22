@@ -56,7 +56,7 @@
     ["c2", "رقم تليفونه", "Emergency Contact Phone"]
   ];
   var SAMPLE = {
-    n: "ماريا إبراهيم",
+    n: "نور محمد",
     nid: "29901011234567",
     bt: "O+",
     al: "البنسلين",
@@ -167,7 +167,7 @@
     var hasAny = F.some(function (f) { return d && d[f[0]] && String(d[f[0]]).trim(); });
     if (!hasAny) {
       return '<div class="cd mu" style="text-align:center;padding:20px">' +
-        L("صاحب الكارت لم يسجّل تفاصيل الطوارئ بعد، أو افتحي الكارت بالباسورد الخارجي لتحميل البيانات.", "The cardholder has not added emergency details yet, or unlock the card with the external password to load data.") +
+        L("صاحب الكارت لم يسجّل تفاصيل الطوارئ بعد، أو افتح الكارت بالباسورد الخارجي لتحميل البيانات.", "The cardholder has not added emergency details yet, or unlock the card with the external password to load data.") +
         "</div>";
     }
     var rows = F.map(function (f) {
@@ -187,7 +187,7 @@
   /* ---- Legacy #e=... Emergency View ---- */
   function emView() {
     if (EM === false) {
-      return '<div class="ac"><h2 style="text-align:center">' + L("الرابط ده مش سليم", "Invalid emergency link") + '</h2><div class="mu" style="text-align:center">' + L("اتأكدي إن الكارت أو الـ QR اتمسح كامل.", "Make sure the NFC card or QR code was scanned completely.") + "</div></div>";
+      return '<div class="ac"><h2 style="text-align:center">' + L("الرابط ده مش سليم", "Invalid emergency link") + '</h2><div class="mu" style="text-align:center">' + L("تأكد أن الكارت أو الـ QR اتمسح كامل.", "Make sure the NFC card or QR code was scanned completely.") + "</div></div>";
     }
     if (!EM) {
       return '<div class="mu" style="text-align:center;padding:40px">' + L("جاري الفتح…", "Opening…") + "</div>";
@@ -233,7 +233,7 @@
         '<div class="ic" style="--c:var(--bl);margin-bottom:8px">' + mi(cardState.unlockedCard ? "lock_open" : "vpn_key", 26) + "</div>" +
         '<b style="font-size:15px;display:block">' + L("الباسورد الخارجي", "External Password") + "</b>" +
         '<div class="mu" style="font-size:12px;margin-top:4px">' + L("لفتح بيانات الكارت العامة (البيانات الخاصة تظل مقفولة)", "Unlock public card details (Private data stays locked)") + "</div>" +
-        '<div style="margin-top:8px;font-size:11.5px;font-weight:700;color:var(--bl)">' + (cardState.unlockedCard ? L("مفتوح الآن ✓", "Unlocked ✓") : L("أدخلي الباسورد الخارجي", "Enter external password")) + "</div>" +
+        '<div style="margin-top:8px;font-size:11.5px;font-weight:700;color:var(--bl)">' + (cardState.unlockedCard ? L("مفتوح الآن ✓", "Unlocked ✓") : L("أدخل الباسورد الخارجي", "Enter external password")) + "</div>" +
       "</div>" +
     "</div>";
 
@@ -262,7 +262,7 @@
     } else {
       bodyContent = '<div class="cd" style="padding:18px">' +
         '<h3 style="font-size:18px;font-weight:700;margin:0 0 6px;text-align:center">' + L("فتح الكارت بالباسورد الخارجي", "Unlock Card with External Password") + "</h3>" +
-        '<div class="mu" style="font-size:12.5px;text-align:center;margin-bottom:10px">' + L("لو أنتِ صاحبة الكارت وبتفتحيه من موبايل تاني، اكتبي الباسورد الخارجي للكارت (أو باسورد حسابك). ولو في حالة طوارئ، دوسي على «وضع الطوارئ» فوق هيفتح من غير باسورد.", "If this is your card on another phone, enter your External Card Password (or account password). For emergencies, tap 'Emergency Mode' above — no password needed.") + "</div>" +
+        '<div class="mu" style="font-size:12.5px;text-align:center;margin-bottom:10px">' + L("إذا كنت صاحب الكارت وتفتحه من موبايل آخر، أدخل الباسورد الخارجي للكارت (أو باسورد حسابك). ولو في حالة طوارئ، اضغط على «وضع الطوارئ» فوق هيفتح من غير باسورد.", "If this is your card on another phone, enter your External Card Password (or account password). For emergencies, tap 'Emergency Mode' above — no password needed.") + "</div>" +
         ( (!bundle.em && bundle.id && bundle.id.indexOf("@") > -1) ? '' : fld("cgEmail", L("البريد الإلكتروني لصاحب الكارت (اختياري للدخول الكامل)", "Cardholder Email (optional for full sign-in)"), { t: "email", d: "ltr", v: bundle.email || (bundle.id && bundle.id.indexOf("@") > -1 ? bundle.id : "") }) ) +
         fld("cgPass", L("الباسورد الخارجي للكارت / كلمة المرور", "External Card Password / Account Password"), { t: "password", d: "ltr" }) +
         '<div class="err" id="cgErr">' + esc(cardState.err) + "</div>" +
@@ -306,7 +306,7 @@
       var pw = pwEl ? pwEl.value : "";
       var emailInput = emEl ? emEl.value.trim().toLowerCase() : (bundle.email || (bundle.id && bundle.id.indexOf("@") > -1 ? bundle.id.toLowerCase() : ""));
       if (!pw) {
-        cardState.err = L("اكتبي الباسورد الخارجي الأول.", "Please enter the external password.");
+        cardState.err = L("أدخل الباسورد الخارجي الأول.", "Please enter the external password.");
         return R();
       }
       cardState.busy = true;
@@ -453,7 +453,7 @@
         (hasNfc ? '<button class="bt o" onclick="emWriteNfc()">' + mi("nfc") + " " + L("برمجة كارت NFC مباشرة", "Write to NFC Card") + "</button>" : "") +
       "</div>" +
       '<div class="mu" style="font-size:12px;margin-top:10px;line-height:1.7">' +
-      L("• لما الكارت ده يتفتح على موبايلك أنتِ، بيدخل على حسابك علطول من غير باسورد.<br>• ولما يتفتح على أي موبايل تاني (زي موبايل مامتك أو في الطوارئ)، بيفتح شاشة كارتك وفيها «وضع الطوارئ» مفتوح فورًا جنب «الباسورد الخارجي».",
+      L("• لما الكارت ده يتفتح على موبايلك الشخصي، بيدخل على حسابك علطول من غير باسورد.<br>• ولما يتفتح على أي موبايل تاني (زي موبايل مامتك أو في الطوارئ)، بيفتح شاشة كارتك وفيها «وضع الطوارئ» مفتوح فورًا جنب «الباسورد الخارجي».",
         "• When scanned on your own signed-in phone, it opens your account directly without a password.<br>• When scanned on any other phone, it shows your Card Screen with 'Emergency Mode' (open without password) right next to 'External Password'.") +
       "</div></div>";
   }
@@ -491,8 +491,8 @@
     }).join("");
     var xpwField = fld("em_xpw", L("باسورد خارجي للكارت (لفتح الكارت على موبايل تاني جنب وضع الطوارئ)", "External Card Password (to unlock card on another phone alongside Emergency Mode)"), { t: "password", d: "ltr", v: d.xpw || "" });
     return pgh(L("بطاقة الطوارئ وكارت الـ NFC", "Emergency & NFC Card")) +
-      '<div class="nt" style="margin-top:0">' + L("اكتبي البيانات اللي عايزاها تظهر لأي حد يفتح «وضع الطوارئ» لو حصل لكِ حاجة، وحددي الباسورد الخارجي للكارت عشان لما يتفتح على موبايل تاني يظهر الباسورد الخارجي وجنبه وضع الطوارئ.", "Enter the details to show in 'Emergency Mode' without a password, and set an External Card Password so scanning your card on another phone shows External Password right next to Emergency Mode.") + "</div>" +
-      (emSample ? '<div class="nt" style="color:var(--bl)">' + L("ده نموذج ببيانات تجريبية للمعاينة. دوسي «بياناتي أنا» وادخلي بياناتك الحقيقية.", "This is sample preview data. Tap 'My Data' to enter your real details.") + "</div>" : "") +
+      '<div class="nt" style="margin-top:0">' + L("أدخل البيانات المطلوب إظهارها لأي حد يفتح «وضع الطوارئ» في حالات الطوارئ، وحدد الباسورد الخارجي للكارت عشان لما يتفتح على موبايل تاني يظهر الباسورد الخارجي وجنبه وضع الطوارئ.", "Enter the details to show in 'Emergency Mode' without a password, and set an External Card Password so scanning your card on another phone shows External Password right next to Emergency Mode.") + "</div>" +
+      (emSample ? '<div class="nt" style="color:var(--bl)">' + L("ده نموذج ببيانات تجريبية للمعاينة. اضغط «بياناتي أنا» وأدخل بياناتك الحقيقية.", "This is sample preview data. Tap 'My Data' to enter your real details.") + "</div>" : "") +
       fs + xpwField +
       '<div class="ar" style="gap:8px;flex-wrap:wrap"><button class="bt o" onclick="emSample=!emSample;R()">' + (emSample ? L("بياناتي أنا", "My Data") : L("معاينة بنموذج", "Sample Preview")) + "</button>" +
       (ready ? '<button class="bt t" onclick="emEdit=false;emSample=false;R()">' + L("إلغاء", "Cancel") + "</button>" : "") +
@@ -565,15 +565,15 @@
   window.emWriteNfc = async function () {
     if (!emLink) await window.emMakeFromSaved();
     if (!("NDEFReader" in window)) {
-      return tst(L("موبايلك أو المتصفح مش بيدعم برمجة NFC المباشرة؛ انسخي الرابط واستخدمي NFC Tools.", "Direct NFC writing is not supported on this browser; copy the link and use NFC Tools."));
+      return tst(L("موبايلك أو المتصفح مش بيدعم برمجة NFC المباشرة؛ انسخ الرابط واستخدم NFC Tools.", "Direct NFC writing is not supported on this browser; copy the link and use NFC Tools."));
     }
     try {
       var ndef = new window.NDEFReader();
-      tst(L("قرّبي كارت الـ NFC من ظهر الموبايل الآن…", "Hold your NFC card against the back of your phone now…"));
+      tst(L("قرّب كارت الـ NFC من ظهر الموبايل الآن…", "Hold your NFC card against the back of your phone now…"));
       await ndef.write({ records: [{ recordType: "url", data: emLink }] });
       tst(L("تمت برمجة كارت الـ NFC بنجاح ✓", "NFC Card programmed successfully ✓"));
     } catch (e) {
-      tst(L("تعذّر الكتابة على الكارت. تأكدي من تفعيل NFC أو انسخي الرابط.", "Could not write to NFC card. Make sure NFC is enabled or copy the link."));
+      tst(L("تعذّر الكتابة على الكارت. تأكد من تفعيل NFC أو انسخ الرابط.", "Could not write to NFC card. Make sure NFC is enabled or copy the link."));
     }
   };
 
@@ -609,7 +609,7 @@
         "<br>" + L("الأبعاد: ", "Dimensions: ") + im.width + "×" + im.height + " px · " + L("الحجم: ", "Size: ") + (blob.size / 1024 | 0) + " KB · " + esc(blob.type) +
         "<br><span style=\"font-size:12px\">" + L("الملخص ده بيتحسب على جهازك وماحدش بيشوف صورتك.", "Computed locally on your device.") + "</span>";
     };
-    im.onerror = function () { o.querySelector("#vws").textContent = L("الصورة دي مش قادر أفتحها، جربي ترفعيها تاني.", "Could not load this image."); };
+    im.onerror = function () { o.querySelector("#vws").textContent = L("الصورة دي مش قادر أفتحها، جرّب رفعها مرة أخرى.", "Could not load this image."); };
     im.src = url;
   };
 
@@ -624,7 +624,7 @@
     var d = document.createElement("div");
     d.id = "inb";
     d.style.cssText = "position:fixed;inset-inline:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--bg);border:1px solid var(--ln);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.15)";
-    d.innerHTML = '<div class="g" style="font-size:13px"><b>' + L("نزّلي IDC كتطبيق", "Install IDC App") + '</b><div class="mu" style="font-size:12px">' + (dip ? L("يفتح أسرع ويشتغل أوفلاين", "Opens faster and works offline") : L("دوسي زرار المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "Tap Share then 'Add to Home Screen'")) + "</div></div>" + (dip ? '<button class="bt" id="inbi" style="height:36px">' + L("تنزيل", "Install") + "</button>" : "") + '<button class="ib" id="inbx">' + mi("close") + "</button>";
+    d.innerHTML = '<div class="g" style="font-size:13px"><b>' + L("ثبّت IDC كتطبيق", "Install IDC App") + '</b><div class="mu" style="font-size:12px">' + (dip ? L("يفتح أسرع ويشتغل أوفلاين", "Opens faster and works offline") : L("اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "Tap Share then 'Add to Home Screen'")) + "</div></div>" + (dip ? '<button class="bt" id="inbi" style="height:36px">' + L("تنزيل", "Install") + "</button>" : "") + '<button class="ib" id="inbx">' + mi("close") + "</button>";
     document.body.appendChild(d);
     d.querySelector("#inbx").onclick = function () { sessionStorage.setItem("idc_ib", "1"); d.remove(); };
     var bi = d.querySelector("#inbi");

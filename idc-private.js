@@ -222,10 +222,10 @@
     if (emReady && pvReady) return "";
     var cards = [];
     if (!emReady) {
-      cards.push('<div class="pvc em" role="button" tabindex="0" onclick="IDCPrivate.openEmergency()"><div class="pvi">' + mi("emergency", 26) + '</div><b>' + L("الطوارئ", "Emergency") + '</b><span>' + L("بيانات تتفتح لأي حد حواليكِ لو حصل لكِ حاجة", "Opens for anyone nearby if something happens to you") + '</span><i class="pvs">' + L("أضيفي بيانات الطوارئ", "Add emergency details") + '</i></div>');
+      cards.push('<div class="pvc em" role="button" tabindex="0" onclick="IDCPrivate.openEmergency()"><div class="pvi">' + mi("emergency", 26) + '</div><b>' + L("الطوارئ", "Emergency") + '</b><span>' + L("بيانات تتفتح لأي حد حولك في حالات الطوارئ", "Opens for anyone nearby if something happens to you") + '</span><i class="pvs">' + L("إضافة بيانات الطوارئ", "Add emergency details") + '</i></div>');
     }
     if (!pvReady) {
-      cards.push('<div class="pvc pr" role="button" tabindex="0" onclick="IDCPrivate.open()"><div class="pvi">' + mi("fingerprint", 26) + '</div><b>' + L("القسم الخاص", "Private Data") + '</b><span>' + L("بياناتك الخاصة، مقفولة بـ 3 باسوردات + البصمة / Face ID", "Your private data, behind 3 passwords + Fingerprint / Face ID") + '</span><i class="pvs">' + L("غير مفعّل · اضغطي للإعداد", "Not set up · tap to set up") + '</i></div>');
+      cards.push('<div class="pvc pr" role="button" tabindex="0" onclick="IDCPrivate.open()"><div class="pvi">' + mi("fingerprint", 26) + '</div><b>' + L("القسم الخاص", "Private Data") + '</b><span>' + L("بياناتك الخاصة، مقفولة بـ 3 باسوردات + البصمة / Face ID", "Your private data, behind 3 passwords + Fingerprint / Face ID") + '</span><i class="pvs">' + L("غير مفعّل · اضغط للإعداد", "Not set up · tap to set up") + '</i></div>');
     }
     return '<div class="pvg"' + (cards.length === 1 ? ' style="grid-template-columns:1fr"' : "") + ">" + cards.join("") + "</div>";
   }
@@ -244,8 +244,8 @@
   function setupView() {
     var bioLine = '<div class="pvbio" id="pvBio">' + mi("fingerprint", 20) + '<span>' + L("التحقق بالبصمة / Face ID مفعّل لحماية القسم الخاص", "Fingerprint / Face ID verification enabled for private data") + "</span></div>";
     return '<div class="cd pvbox"><div class="pvhd">' + mi("fingerprint", 34) + "</div>" +
-      "<h3>" + L("فعّلي القسم الخاص", "Set up your private section") + "</h3>" +
-      '<div class="mu pvm">' + L("القسم ده بيتقفل بـ 3 باسوردات (باسورد الجيميل اللي سجلتِ بيه + باسورد جيميل مختلف + باسورد إضافي) + بصمتك / Face ID. كل فتح بيتسجل (إمتى، فين، إزاي) وبيتقفل لوحده أول ما تخرجي منه.", "Locked with 3 passwords (your registered Gmail password + a different Gmail password + an extra password) + your Fingerprint / Face ID. Every unlock is logged (when, where, how) and it auto-locks when you leave.") + "</div>" +
+      "<h3>" + L("تفعيل القسم الخاص", "Set up your private section") + "</h3>" +
+      '<div class="mu pvm">' + L("القسم ده بيتقفل بـ 3 باسوردات (باسورد الجيميل المسجل به + باسورد جيميل مختلف + باسورد إضافي) + بصمتك / Face ID. كل فتح بيتسجل (إمتى، فين، إزاي) وبيتقفل لوحده فور الخروج منه.", "Locked with 3 passwords (your registered Gmail password + a different Gmail password + an extra password) + your Fingerprint / Face ID. Every unlock is logged (when, where, how) and it auto-locks when you leave.") + "</div>" +
       pw("pvA", L("باسورد الجيميل المسجل بيه في التطبيق", "Your registered account password")) +
       fld("pvE", L("جيميل مختلف (Second Gmail)", "Different Gmail address"), { t: "email", d: "ltr" }) +
       pw("pvB", L("باسورد الجيميل المختلف (6 حروف أو أرقام على الأقل)", "Second-Gmail password (at least 6 chars)")) + pw("pvB2", L("تأكيد باسورد الجيميل المختلف", "Confirm second-Gmail password")) +
@@ -262,17 +262,17 @@
     var bioLine = '<div class="pvbio" id="pvBio">' + mi("fingerprint", 20) + "<span>" +
       (nd ? L("هيطلب بصمتك / Face ID عشان يسجّل الجهاز ده.", "Will ask for fingerprint / Face ID to register this device.")
         : L("يتطلب إدخال الـ 3 باسوردات + البصمة / Face ID لفتح البيانات المؤمّنة.", "Requires the 3 passwords + Fingerprint / Face ID to unlock.")) + "</span></div>";
-    var lockMsg = left ? '<div class="nt" style="color:var(--rd)">' + L("محاولات غلط كتير. القسم مقفول مؤقتًا، جرّبي بعد ", "Too many wrong attempts. Locked for ") + "<b dir=\"ltr\">" + fmtSec(left) + "</b></div>" : "";
+    var lockMsg = left ? '<div class="nt" style="color:var(--rd)">' + L("محاولات غلط كتير. القسم مقفول مؤقتًا، جرّب بعد ", "Too many wrong attempts. Locked for ") + "<b dir=\"ltr\">" + fmtSec(left) + "</b></div>" : "";
     return '<div class="cd pvbox"><div class="pvhd">' + mi("lock", 34) + "</div>" +
       "<h3>" + L("القسم الخاص مقفول", "Private section is locked") + "</h3>" +
-      '<div class="mu pvm">' + L("اكتبي الباسوردات التلاتة + البصمة. الجيميل المختلف المسجّل: ", "Enter the three passwords + Fingerprint. Second Gmail: ") + '<span dir="ltr">' + esc(maskEmail(S.pv.e2)) + "</span></div>" +
+      '<div class="mu pvm">' + L("أدخل كلمات المرور الثلاث + البصمة. الجيميل المختلف المسجّل: ", "Enter the three passwords + Fingerprint. Second Gmail: ") + '<span dir="ltr">' + esc(maskEmail(S.pv.e2)) + "</span></div>" +
       lockMsg +
-      pw("pvA", L("باسورد الجيميل اللي سجلتِ بيه", "Registered account password")) +
+      pw("pvA", L("باسورد الجيميل المسجل به", "Registered account password")) +
       pw("pvB", L("باسورد الجيميل المختلف", "Different Gmail password")) +
       pw("pvC", L("الباسورد التاني الإضافي", "Extra password")) +
       eyeBtn() + bioLine + '<div class="err" id="pvErr"></div>' +
       '<button class="bt w" id="pvGo" data-label="' + label + '" onclick="IDCPrivate.unlock(' + (nd ? "true" : "false") + ')"' + (left ? " disabled" : "") + ">" + label + "</button>" +
-      '<button class="pvbtn2" onclick="IDCPrivate.setMode(\'' + (nd ? "unlock" : "newdev") + '\')">' + (nd ? L("رجوع", "Back") : L("أول مرة على الجهاز ده؟ سجّلي بصمته", "First time on this device? Register its fingerprint")) + "</button></div>";
+      '<button class="pvbtn2" onclick="IDCPrivate.setMode(\'' + (nd ? "unlock" : "newdev") + '\')">' + (nd ? L("رجوع", "Back") : L("أول مرة على الجهاز ده؟ سجّل بصمته", "First time on this device? Register its fingerprint")) + "</button></div>";
   }
 
   function whenText(ts) {
@@ -296,7 +296,7 @@
   }
 
   function openView() {
-    return '<div class="pvban"><div style="color:var(--gn)">' + mi("verified_user", 30) + '</div><div class="g"><b>' + L("القسم الخاص مفتوح الآن", "Private section is open") + "</b><div>" + L("أول ما تطلعي من البارتيشن ده هيتقفل تاني تلقائيًا لتأمين بياناتك.", "As soon as you leave this partition, it locks again automatically.") + '</div></div><button class="bt o" style="height:36px;padding:0 14px" onclick="IDCPrivate.lock()">' + L("قفل الآن", "Lock now") + "</button></div>" +
+    return '<div class="pvban"><div style="color:var(--gn)">' + mi("verified_user", 30) + '</div><div class="g"><b>' + L("القسم الخاص مفتوح الآن", "Private section is open") + "</b><div>" + L("فور الخروج من البارتيشن ده هيتقفل تاني تلقائيًا لتأمين بياناتك.", "As soon as you leave this partition, it locks again automatically.") + '</div></div><button class="bt o" style="height:36px;padding:0 14px" onclick="IDCPrivate.lock()">' + L("قفل الآن", "Lock now") + "</button></div>" +
       addb("on", "private") + list("on", "private") + logHTML();
   }
 
@@ -319,9 +319,9 @@
   async function doSetup() {
     if (busy) return;
     var a = raw("pvA"), e2 = raw("pvE").trim().toLowerCase(), b = raw("pvB"), b2 = raw("pvB2"), c = raw("pvC"), c2 = raw("pvC2");
-    if (!a || !e2 || !b || !c) return showErr(L("املي كل الخانات المطلوبة.", "Fill in every field."));
+    if (!a || !e2 || !b || !c) return showErr(L("يرجى ملء جميع الخانات المطلوبة.", "Fill in every field."));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e2) || e2 === String(S.userEmail || "").toLowerCase()) {
-      return showErr(L("اكتبي جيميل تاني مختلف عن الجيميل اللي سجلتِ بيه.", "Enter a second email address different from your account email."));
+      return showErr(L("أدخل بريدًا إلكترونيًا آخر مختلفًا عن الجيميل المسجل به.", "Enter a second email address different from your account email."));
     }
     if (b.length < 6 || c.length < 6) return showErr(L("كل باسورد لازم يكون 6 حروف أو أرقام على الأقل.", "Each password needs at least 6 characters."));
     if (b !== b2 || c !== c2) return showErr(L("تأكيد الباسورد غير متطابق.", "Confirmation does not match."));
@@ -340,7 +340,7 @@
         try { ids = [await bioRegister()]; }
         catch (e) {
           setBusy(false);
-          return showErr(L("تم إلغاء البصمة / Face ID. كمّلي التحقق بالبصمة لتفعيل القسم الخاص.", "Fingerprint / Face ID was cancelled. Please complete it to enable the private section."));
+          return showErr(L("تم إلغاء البصمة / Face ID. أكمل التحقق بالبصمة لتفعيل القسم الخاص.", "Fingerprint / Face ID was cancelled. Please complete it to enable the private section."));
         }
       }
 
@@ -366,7 +366,7 @@
       tst(L("تم تفعيل القسم الخاص وتأمينه بنجاح", "Private section enabled & secured"));
     } catch (e) {
       pvKey = null; pk = false; setBusy(false);
-      showErr(L("حصلت مشكلة أثناء التفعيل. حاولي تاني.", "Something went wrong. Try again."));
+      showErr(L("حصلت مشكلة أثناء التفعيل. حاول مرة أخرى.", "Something went wrong. Try again."));
     }
   }
 
@@ -403,9 +403,9 @@
   async function doUnlock(addDev) {
     if (busy) return;
     var left = lockLeft();
-    if (left) return showErr(L("القسم مقفول مؤقتًا، جرّبي بعد ", "Temporarily locked, try in ") + fmtSec(left));
+    if (left) return showErr(L("القسم مقفول مؤقتًا، جرّب بعد ", "Temporarily locked, try in ") + fmtSec(left));
     var a = raw("pvA"), b = raw("pvB"), c = raw("pvC");
-    if (!a || !b || !c) return showErr(L("اكتبي الباسوردات التلاتة.", "Enter all three passwords."));
+    if (!a || !b || !c) return showErr(L("أدخل كلمات المرور الثلاث.", "Enter all three passwords."));
     setBusy(true); showErr("");
     var wherePromise = getWhere();           // starts the location prompt in parallel
     var res = await core(addDev, a, b, c);
@@ -413,7 +413,7 @@
     if (!res.ok) {
       var msg, remaining = null;
       if (res.reason === "pw") remaining = noteFail();
-      if (res.reason === "bio") msg = L("البصمة / Face ID اتلغت. لازم تأكدي البصمة عشان يفتح.", "Fingerprint / Face ID was cancelled. Biometric verification is required.");
+      if (res.reason === "bio") msg = L("البصمة / Face ID اتلغت. لازم تأكيد البصمة عشان يفتح.", "Fingerprint / Face ID was cancelled. Biometric verification is required.");
       else msg = L("واحد من الباسوردات التلاتة غلط.", "One of the three passwords is wrong.") + (remaining > 0 ? L(" فاضل " + remaining + " محاولات.", " " + remaining + " attempts left.") : "");
       addLog({ ev: "fail", s: 0, how: res.reason === "pw" ? L("فشل: كلمة مرور غير صحيحة", "Failed: wrong password") : L("فشل: لم تكتمل البصمة / Face ID", "Failed: biometrics cancelled"), where: where });
       setBusy(false);
@@ -473,7 +473,7 @@
     if (document.getElementById("pvBio")) bioAvail().then(function (ok) {
       var e = document.getElementById("pvBio");
       if (!e || S.pv) return;
-      e.innerHTML = mi("fingerprint", 20) + "<span>" + (ok ? L("هيتسجّل بصمتك / Face ID لما تدوسي تفعيل.", "Your fingerprint / Face ID will be registered when you tap Turn on.")
+      e.innerHTML = mi("fingerprint", 20) + "<span>" + (ok ? L("هيتسجّل بصمتك / Face ID عند الضغط على تفعيل.", "Your fingerprint / Face ID will be registered when you tap Turn on.")
         : L("التحقق بالبصمة / Face ID + الـ 3 باسوردات مفعّل لحماية القسم الخاص.", "Biometric + 3-password protection enabled for Private section.")) + "</span>";
     });
   };

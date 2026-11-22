@@ -476,13 +476,13 @@
       lost: {
         t: "Report lost card|الإبلاغ عن فقدان الكارد",
         b: [
-          P_("Reporting a card freezes it so it can no longer open your profile. You can link a replacement afterwards.|الإبلاغ بيجمّد الكارد فمبقاش يفتح ملفك، وتقدري تربطي كارد بديل بعدها."),
+          P_("Reporting a card freezes it so it can no longer open your profile. You can link a replacement afterwards.|الإبلاغ بيجمّد الكارد فمبقاش يفتح ملفك، ويمكنك ربط كارد بديل بعدها."),
           H("What happened|إيه اللي حصل"),
           { k: "choice", key: "lost", o: ["Lost|اتفقد", "Stolen|اتسرق", "Damaged|اتلف"] },
           BT("Report card|بلّغ عن الكارد", "danger", function () {
-            if (confirm(B("Report this card as lost?|تبلّغ عن الكارد كمفقود؟"))) {
+            if (confirm(B("Report this card as lost?|الإبلاغ عن الكارد كمفقود؟"))) {
               st.frozen = true;
-              toast(B("Card reported and frozen|اتبلّغ عن الكارد واتجمّد"));
+              toast(B("Card reported and frozen|االإبلاغ عن الكارد واتجمّد"));
               goRoute("t-nfc");
             }
           })
@@ -586,10 +586,10 @@
           k: "faq",
           r: [
             ["What is IDC?|يعني إيه IDC؟", "A digital identity platform with an NFC card that opens your verified profile.|منصة هوية رقمية بكارد NFC بيفتح ملفك الموثّق."],
-            ["What if I lose my card?|لو ضيّعت الكارد؟", "Report it from NFC Card Settings. It is frozen immediately and you can link a replacement.|بلّغي من إعدادات الكارد، بيتجمّد فورًا وتقدري تربطي كارد بديل."],
-            ["Who can see my emergency information?|مين يشوف بيانات الطوارئ؟", "Only what you allow, and only when your card is scanned.|اللي إنتِ بتسمحي بيه بس، ولما الكارد يتعمل له scan."],
+            ["What if I lose my card?|لو ضيّعت الكارد؟", "Report it from NFC Card Settings. It is frozen immediately and you can link a replacement.|بلّغ من إعدادات الكارد، بيتجمّد فورًا ويمكنك ربط كارد بديل."],
+            ["Who can see my emergency information?|مين يشوف بيانات الطوارئ؟", "Only what you allow, and only when your card is scanned.|ما تسمح به فقط، ولما الكارد يتعمل له scan."],
             ["Is my data encrypted?|بياناتي متشفّرة؟", "Yes. Vault content is encrypted on your device with AES-256-GCM before storage.|أيوه، محتوى الخزنة بيتشفّر على جهازك بـ AES-256-GCM قبل التخزين."],
-            ["How do I change my password?|إزاي أغيّر كلمة المرور؟", "Go to Account Settings, then Change password.|من إعدادات الحساب، اختاري تغيير كلمة المرور."]
+            ["How do I change my password?|إزاي أغيّر كلمة المرور؟", "Go to Account Settings, then Change password.|من إعدادات الحساب، اختر تغيير كلمة المرور."]
           ]
         }]
       },
@@ -618,7 +618,7 @@
           H("Category|النوع"),
           { k: "choice", key: "cat", o: ["App problem|مشكلة في التطبيق", "Card problem|مشكلة في الكارد", "Security concern|مشكلة أمان", "Other|أخرى"] },
           F([["Describe the problem|وصف المشكلة", "", "area"]], "Send report|ابعت البلاغ", "Report sent|اتبعت البلاغ", function (v) {
-            return reqd(v, "Please describe the problem|اكتبي وصف للمشكلة");
+            return reqd(v, "Please describe the problem|يرجى كتابة وصف للمشكلة");
           }),
           { k: "tog", r: [["Include diagnostic information|إرفاق معلومات تشخيصية", "r_diag", true]] }
         ]
@@ -628,11 +628,11 @@
         b: [{
           k: "steps",
           r: [
-            "Make sure NFC is turned on in your phone settings.|اتأكدي إن NFC شغّال في إعدادات الموبايل.",
-            "Hold the card against the back of the phone, near the top.|حطي الكارد ورا الموبايل ناحية فوق.",
-            "Keep it still for a second until you feel a vibration.|سيبيه ثابت ثانية لحد ما تحسي باهتزاز.",
+            "Make sure NFC is turned on in your phone settings.|تأكد أن NFC شغّال في إعدادات الموبايل.",
+            "Hold the card against the back of the phone, near the top.|ضع الكارد ورا الموبايل ناحية فوق.",
+            "Keep it still for a second until you feel a vibration.|اتركه ثابتًا ثانية لحد ما تشعر باهتزاز.",
             "The profile opens automatically.|الملف هيفتح لوحده.",
-            "If nothing happens, remove the phone case and try again.|لو مفيش حاجة حصلت، شيلي الكفر وجرّبي تاني."
+            "If nothing happens, remove the phone case and try again.|لو مفيش حاجة حصلت، أزل الغطاء وجرّب مرة أخرى."
           ]
         }]
       },
@@ -640,20 +640,20 @@
         t: "Privacy policy|سياسة الخصوصية",
         b: [
           H("Data we collect|البيانات اللي بنجمعها"),
-          P_("Profile details you provide, card scan events, and device information needed to secure your account.|بيانات الملف اللي بتدخليها، وأحداث scan للكارد، ومعلومات الجهاز اللازمة لتأمين حسابك."),
+          P_("Profile details you provide, card scan events, and device information needed to secure your account.|بيانات الملف اللي التي تدخلها، وأحداث scan للكارد، ومعلومات الجهاز اللازمة لتأمين حسابك."),
           H("How we use it|بنستخدمها إزاي"),
-          P_("To operate your profile, protect your account, and show information you choose to share.|لتشغيل ملفك وحماية حسابك وعرض اللي إنتِ اخترتي تشاركيه."),
+          P_("To operate your profile, protect your account, and show information you choose to share.|لتشغيل ملفك وحماية حسابك وعرض ما اخترت مشاركته."),
           H("Your controls|تحكّمك"),
-          P_("You decide who sees your profile and can delete your account at any time.|إنتِ اللي بتحددي مين يشوف ملفك وتقدري تحذفي حسابك في أي وقت.")
+          P_("You decide who sees your profile and can delete your account at any time.|أنت من يحدد من يرى ملفك ويمكنك حذف حسابك في أي وقت.")
         ]
       },
       terms: {
         t: "Terms & conditions|الشروط والأحكام",
         b: [
           H("Using IDC|استخدام IDC"),
-          P_("You are responsible for the accuracy of the information in your profile and for keeping your card and credentials secure.|إنتِ مسؤولة عن دقة بيانات ملفك وعن الحفاظ على الكارد وبيانات الدخول."),
+          P_("You are responsible for the accuracy of the information in your profile and for keeping your card and credentials secure.|أنت مسؤول عن دقة بيانات ملفك وعن الحفاظ على الكارد وبيانات الدخول."),
           H("Cards|الكروت"),
-          P_("Report a lost or stolen card promptly so it can be frozen.|بلّغي فورًا عن الكارد لو ضاع أو اتسرق عشان يتجمّد."),
+          P_("Report a lost or stolen card promptly so it can be frozen.|بلّغ فورًا عن الكارد لو ضاع أو اتسرق عشان يتجمّد."),
           H("Changes|التعديلات"),
           P_("These terms may be updated. Continued use means you accept the changes.|ممكن الشروط دي تتحدّث، واستمرارك في الاستخدام معناه موافقتك.")
         ]
@@ -679,7 +679,7 @@
 
   var ACT = {
     signout: function () {
-      if (confirm(B("Sign out of all devices?|تسجّلي الخروج من كل الأجهزة؟"))) {
+      if (confirm(B("Sign out of all devices?|تسجيل الخروج من كل الأجهزة؟"))) {
         if (typeof window.idcSignOut === "function") window.idcSignOut();
       }
     },
@@ -947,7 +947,7 @@
     } else if (b.k === "del") {
       var f = document.createElement("div");
       f.className = "st-f";
-      f.innerHTML = "<label>" + B("Type DELETE to confirm|اكتبي DELETE للتأكيد") + '</label><input autocomplete="off">';
+      f.innerHTML = "<label>" + B("Type DELETE to confirm|اكتب DELETE للتأكيد") + '</label><input autocomplete="off">';
       var delBtn = document.createElement("button");
       delBtn.className = "cta danger";
       delBtn.disabled = true;
@@ -955,7 +955,7 @@
       var inp = f.querySelector("input");
       inp.oninput = function () { delBtn.disabled = inp.value.trim() !== "DELETE"; };
       delBtn.onclick = function () {
-        if (confirm(B("Delete your account permanently?|تحذفي حسابك نهائيًا؟"))) {
+        if (confirm(B("Delete your account permanently?|حذف الحساب نهائيًا؟"))) {
           if (typeof window.idcSignOut === "function") window.idcSignOut();
         }
       };
@@ -1010,7 +1010,7 @@
       "</header>" +
       '<div class="me" id="idc-st-me" style="cursor:pointer">' +
         '<span class="av" style="' + avStyle + '">' + avText + "</span>" +
-        "<div><b>" + esc(p.n || B("Maria|ماريا")) + "</b><small>" + B("IDC Member · Verified|عضو IDC · موثّق") + "</small></div>" +
+        "<div><b>" + esc(p.n || B("Nour|نور")) + "</b><small>" + B("IDC Member · Verified|عضو IDC · موثّق") + "</small></div>" +
       "</div>" +
       '<div style="height:12px"></div>';
 

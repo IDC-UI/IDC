@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-22T18:15:47.099Z",
-  "passed": 47,
-  "total": 47,
+  "at": "2026-11-22T18:45:11.395Z",
+  "passed": 48,
+  "total": 48,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -110,6 +110,11 @@
     },
     {
       "name": "S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)",
       "ok": true,
       "detail": ""
     },
