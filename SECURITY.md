@@ -1,17 +1,18 @@
-# خطوات الأمان اللي لازم تتعمل من لوحة التحكم (مش من الكود)
+# خطوات الأمان المطلوبة من لوحة التحكم (خارج الكود)
 
-الكود اتأمّن واتختبر (`node --experimental-strip-types tests/security.test.mjs` = 44 فحص). الخطوات دي بتتنفّذ على GitHub وSupabase:
+الكود مؤمّن وتم اختباره بالكامل (`node --experimental-strip-types tests/security.test.mjs` = 62 فحص). الخطوات التالية تُنفّذ على GitHub وSupabase:
 
-1. **GitHub → Settings → Pages → Enforce HTTPS** (فعّليها). الكود كمان بيحوّل http إلى https وبيرفض أي اتصال مش مشفّر عبر CSP.
-2. **تطبيق الـ migration الجديدة والإعدادات:**
+1. **GitHub → Settings → Pages → Enforce HTTPS** (تفعيل الخيار). الكود يحوّل أيضًا `http` إلى `https` ويرفض أي اتصال غير مشفّر عبر `CSP`.
+2. **تطبيق ملفات الـ migrations الجديدة ونشر الـ Edge Functions:**
    ```powershell
    supabase db push
-   supabase config push        # بعد ما تحطي site_url الحقيقي في supabase/config.toml
-   supabase secrets set ALLOWED_ORIGINS=https://YOUR_USER.github.io
+   supabase config push        # بعد وضع site_url الحقيقي في supabase/config.toml
+   supabase secrets set ALLOWED_ORIGINS=https://idc-ui.github.io
    supabase functions deploy secure-vault
    supabase functions deploy secure-upload
+   supabase functions deploy authorize-route
    ```
-   من غير `ALLOWED_ORIGINS` الـ Edge Functions بترفض طلبات المتصفح (ده مقصود، fail-closed).
-3. **Supabase Dashboard → Authentication → Rate Limits / Attack Protection:** راجعي الأرقام، وفعّلي CAPTCHA (Turnstile) لو عايزة حماية أقوى للّوجن.
-4. **SRI للمكتبات الخارجية:** شغّلي `node scripts/generate-sri.mjs` (محتاج إنترنت) وحطي قيم `integrity` في وسمي `<script>` في `index.html`.
-5. **بعد النشر:** اعملي تسجيل حساب جديد بإيميل حقيقي وتأكدي إن رابط التأكيد بيفتح على رابط GitHub Pages الصح.
+   بدون `ALLOWED_ORIGINS` ترفض الـ Edge Functions طلبات المتصفح تلقائيًا (`fail-closed`).
+3. **Supabase Dashboard → Authentication → Rate Limits / Attack Protection:** مراجعة حدود الطلبات وتفعيل الحماية الإضافية عند الحاجة.
+4. **SRI للمكتبات الخارجية:** تشغيل `node scripts/generate-sri.mjs` ووضع قيم `integrity` في وسمي `<script>` داخل `index.html`.
+5. **بعد النشر:** تجربة إنشاء حساب جديد ببريد حقيقي والتأكد من أن رابط التفعيل يفتح على رابط GitHub Pages الصحيح.

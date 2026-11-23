@@ -69,6 +69,19 @@ const plusSrc = read("idc-plus.js");
 check("S26 Clean URL router (404.html + IDCAuthMiddleware) resolves /IDC/<id> and enforces anti-IDOR authorization", /idc_requested_route/.test(router404) && /IDCAuthMiddleware/.test(plusSrc + supa));
 check("S27 First-time setup & NFC studio auto-generate personal URL + QR code and render step-by-step NFC programming guide", /دليل برمجة كارت الـ NFC خطوة بخطوة/.test(plusSrc + html) && /NFC Tools/.test(plusSrc + html));
 check("S28 LinkedIn, custom user links, and Bank Accounts (IBAN / InstaPay) are supported across profile and vault", /linkedin/.test(html + plusSrc) && /bank:\s*"حساب بنكي"/.test(html + plusSrc) && /IBAN|InstaPay/.test(html + plusSrc + settingsSrc));
+const introSrc = read("idc-intro.js");
+check("S29 speed-engineer Images & Loading UX: WebP compression, lazy/fetchpriority attributes, .sk Skeleton loader, and auth pending state", /image\/webp/.test(html) && /loading="lazy"/.test(html) && /fetchpriority="high"/.test(introSrc) && /\.sk\b/.test(html) && /skCard/.test(plusSrc + supa) && /authBusy/.test(supa));
+check("S30 speed-engineer Pagination & Caching: 20-item page size with load-more and in-memory vault/bundle caches", /PAGE_SIZE\s*=\s*20/.test(html) && /moreItems/.test(html) && /memLocalVaults/.test(supa) && /memStoredBundles/.test(plusSrc));
+check("S31 web-design-guidelines: label-for binding, aria-live polite, touch-action manipulation, overscroll-behavior contain, preconnect, and ellipsis in 404.html", /<label for="/.test(html) && /aria-live="polite"/.test(html) && /touch-action:\s*manipulation/.test(html) && /overscroll-behavior:\s*contain/.test(html) && /rel="preconnect"/.test(html) && !/\.\.\./.test(router404));
+const sqlStorageIdx = fs.existsSync(path.join(ROOT, "supabase/migrations/20261123000000_idc_storage_rls_index.sql"))
+  ? read("supabase/migrations/20261123000000_idc_storage_rls_index.sql")
+  : "";
+check("S32 supabase-postgres-best-practices: storage.objects 200-file RLS check filters on indexed owner = (select auth.uid())", /o\.owner\s*=\s*\(select auth\.uid\(\)\)/.test(sqlStorageIdx));
+const agentsMd = fs.existsSync(path.join(ROOT, "AGENTS.md")) ? read("AGENTS.md") : "";
+check("S33 speed-engineer profile persisted in AGENTS.md with Tier S and speed-engineer trigger rule", /## Performance profile/.test(agentsMd) && /Tier:\s*S/.test(agentsMd) && /speed-engineer/.test(agentsMd));
+const docsSrc = read("SECURITY.md") + read("SETUP.md") + read("README.md");
+const docsFemMatch = (read("SECURITY.md") + read("SETUP.md")).match(/فعّليها|فعّلي|راجعي|أنشئي|ضعي|وأضيفيه|اضبطي|انسخي|ثبّتي|وسجّلي|شغّلي|أضيفي|تستخدمي|اختاري|اخترتِ|تحطي|عايزة|اعملي|وتأكدي/);
+check("S34 writing-guidelines: SECURITY.md, SETUP.md, and README.md are 100% gender-neutral and document authorize-route", !docsFemMatch && /authorize-route/.test(docsSrc), docsFemMatch ? "Found in docs: " + docsFemMatch[0] : "");
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };

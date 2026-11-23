@@ -65,15 +65,22 @@
     c2: "01000000000"
   };
 
+  var memStoredBundles = null;
   function getStoredBundles() {
-    try { return JSON.parse(localStorage.getItem(CARD_STORE_KEY)) || {}; }
-    catch (e) { return {}; }
+    if (memStoredBundles) return memStoredBundles;
+    try {
+      memStoredBundles = JSON.parse(localStorage.getItem(CARD_STORE_KEY)) || {};
+      return memStoredBundles;
+    } catch (e) {
+      return {};
+    }
   }
   function saveStoredBundle(id, bundle) {
     if (!id || !bundle) return;
     try {
       var all = getStoredBundles();
       all[String(id).toLowerCase()] = bundle;
+      memStoredBundles = all;
       localStorage.setItem(CARD_STORE_KEY, JSON.stringify(all));
     } catch (e) {}
   }
@@ -208,13 +215,23 @@
       rows + call + "</div>";
   }
 
+  function skCard() {
+    return '<div class="cd" aria-busy="true" aria-live="polite" style="padding:18px">' +
+      '<div class="sk" style="height:22px;width:55%;margin-bottom:14px"></div>' +
+      '<div class="sk" style="height:15px;width:92%;margin-bottom:10px"></div>' +
+      '<div class="sk" style="height:15px;width:78%;margin-bottom:16px"></div>' +
+      '<div class="sk" style="height:44px;width:100%"></div>' +
+      "</div>";
+  }
+  window.skCard = skCard;
+
   /* ---- Legacy #e=... Emergency View ---- */
   function emView() {
     if (EM === false) {
       return '<div class="ac"><h2 style="text-align:center">' + L("الرابط ده مش سليم", "Invalid emergency link") + '</h2><div class="mu" style="text-align:center">' + L("تأكد أن الكارت أو الـ QR اتمسح كامل.", "Make sure the NFC card or QR code was scanned completely.") + "</div></div>";
     }
     if (!EM) {
-      return '<div class="mu" style="text-align:center;padding:40px">' + L("جاري الفتح…", "Opening…") + "</div>";
+      return '<div class="ac" style="margin-top:12px">' + skCard() + "</div>";
     }
     return '<div class="ac" style="margin-top:12px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' + wm() + '<button class="bt t" onclick="setLang(S.lang===\'en\'?\'ar\':\'en\')">' + (S.lang === "en" ? "العربية" : "EN") + "</button></div>" +

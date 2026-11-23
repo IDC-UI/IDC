@@ -78,15 +78,34 @@
     return Uint8Array.from(atob(base64), function (character) { return character.charCodeAt(0); });
   }
 
+  var memLocalVaults = null;
+  var authBusy = false;
+
+  function setAuthBusy(on_, label) {
+    authBusy = Boolean(on_);
+    if (typeof document === "undefined" || !document.querySelector) return;
+    var btn = document.querySelector("#app .ac .bt.w");
+    if (btn) {
+      btn.disabled = authBusy;
+      if (authBusy && label) btn.textContent = label;
+    }
+  }
+
   function getLocalVaults() {
-    try { return JSON.parse(localStorage.getItem(LOCAL_VAULTS_KEY)) || {}; }
-    catch (e) { return {}; }
+    if (memLocalVaults) return memLocalVaults;
+    try {
+      memLocalVaults = JSON.parse(localStorage.getItem(LOCAL_VAULTS_KEY)) || {};
+      return memLocalVaults;
+    } catch (e) {
+      return {};
+    }
   }
 
   function setLocalVault(email, record) {
     try {
       var all = getLocalVaults();
       all[String(email || "").toLowerCase()] = record;
+      memLocalVaults = all;
       localStorage.setItem(LOCAL_VAULTS_KEY, JSON.stringify(all));
     } catch (e) {}
   }
@@ -573,19 +592,23 @@
     if (wait) return setError("محاولات كتير. جرّب بعد " + wait + " ثانية.");
 
     err = "";
+    setAuthBusy(true, "جاري فتح المحفظة المشفرة…");
     var result;
     try {
       result = await client.auth.signInWithPassword({ email: email, password: password });
     } catch (e) {
+      setAuthBusy(false);
       return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
     }
     if (result.error || !result.data || !result.data.user) {
+      setAuthBusy(false);
       throttleFail();
       return setError(appError(result.error));
     }
     try {
       var wantBio = typeof document !== "undefined" && document.getElementById("regLoginBio") && document.getElementById("regLoginBio").checked;
       await loadVault(password, result.data.user, false);
+      setAuthBusy(false);
       throttleReset();
       if (wantBio && window.idcOuterBioRegister) {
         await window.idcOuterBioRegister(true);
@@ -658,6 +681,8 @@
 
   window.idcSignOut = async function () {
     clearActiveSession();
+    memLocalVaults = null;
+    memEmergencyCache = null;
     try { localStorage.removeItem(LOCAL_VAULTS_KEY); } catch (e) {}
     if (window.IDCPrivate) window.IDCPrivate.reset();
     if (client) {

@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-22T19:28:11.449Z",
-  "passed": 56,
-  "total": 56,
+  "at": "2026-11-23T07:01:01.389Z",
+  "passed": 62,
+  "total": 62,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -140,6 +140,36 @@
     },
     {
       "name": "S28 LinkedIn, custom user links, and Bank Accounts (IBAN / InstaPay) are supported across profile and vault",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S29 speed-engineer Images & Loading UX: WebP compression, lazy/fetchpriority attributes, .sk Skeleton loader, and auth pending state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S30 speed-engineer Pagination & Caching: 20-item page size with load-more and in-memory vault/bundle caches",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S31 web-design-guidelines: label-for binding, aria-live polite, touch-action manipulation, overscroll-behavior contain, preconnect, and ellipsis in 404.html",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S32 supabase-postgres-best-practices: storage.objects 200-file RLS check filters on indexed owner = (select auth.uid())",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S33 speed-engineer profile persisted in AGENTS.md with Tier S and speed-engineer trigger rule",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S34 writing-guidelines: SECURITY.md, SETUP.md, and README.md are 100% gender-neutral and document authorize-route",
       "ok": true,
       "detail": ""
     },

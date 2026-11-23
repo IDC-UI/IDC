@@ -911,10 +911,11 @@
     } else if (b.k === "docs_list") {
       var cDocs = card();
       var items = (typeof S !== "undefined" && Array.isArray(S.items)) ? S.items : [];
+      var dLim = st.docsLimit || 20;
       if (!items.length) {
         cDocs.innerHTML = '<div class="row"><span class="l v">' + B("No documents yet|مفيش وثائق لسه") + "</span></div>";
       } else {
-        items.forEach(function (doc) {
+        items.slice(0, dLim).forEach(function (doc) {
           var rDoc = document.createElement("div");
           rDoc.className = "row";
           rDoc.innerHTML = '<span class="l">' + esc(doc.title) + '<span class="sub">' + esc((window.TN && window.TN[doc.type]) || doc.type) + "</span></span>";
@@ -929,6 +930,13 @@
         });
       }
       w.appendChild(cDocs);
+      if (items.length > dLim) {
+        var moreB = document.createElement("button");
+        moreB.className = "cta sec";
+        moreB.textContent = B("Show more (" + (items.length - dLim) + ")|عرض المزيد (" + (items.length - dLim) + ")");
+        moreB.onclick = function () { st.docsLimit = dLim + 20; render(); };
+        w.appendChild(moreB);
+      }
     } else if (b.k === "steps") {
       var c5 = card();
       b.r.forEach(function (s, n) {

@@ -50,6 +50,7 @@ Attachments are encrypted in the browser before upload. `secure-upload` requires
    supabase db push
    supabase functions deploy secure-vault
    supabase functions deploy secure-upload
+   supabase functions deploy authorize-route
    ```
 
 5. If the Edge Functions do not receive `SUPABASE_ANON_KEY` automatically, configure the public project key in Edge Function secrets. Never use a service-role or secret key in the frontend.
