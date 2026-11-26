@@ -166,6 +166,7 @@
       p: S.p,
       items: window.IDCPrivate ? window.IDCPrivate.publicItems(S.items) : S.items,
       pv: S.pv || null,
+      bk: S.bk || null,
       sec: S.sec,
       log: S.log,
       em: S.em || null,
@@ -227,6 +228,9 @@
   window.idcOuterEmergencyCardHtml = function () {
     var d = loadPublicEmergencyCache();
     var isEn = typeof S !== "undefined" && S.lang === "en";
+    var sosBtn = '<button class="bt w" style="margin-top:10px;background:#b42318;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700" onclick="if(window.idcTriggerSOS)window.idcTriggerSOS()">' +
+      mi("sos", 22) + " " + (isEn ? "🚨 Emergency SOS (Send Location & Profile)" : "🚨 استغاثة طوارئ (SOS) — إرسال الموقع والملف") + '</button>';
+    var offlineBadge = '<div class="mu" style="font-size:11.5px;margin-top:6px;text-align:center">' + (isEn ? "Works offline ✓ · Cached locally" : "يعمل بدون إنترنت ✓ · محفوظة محليًا") + '</div>';
     if (!d || (!d.bt && !d.al && !d.ch && !d.md && !d.c1 && !d.c2 && !d.nt)) {
       return '<div class="cd" style="border:1.5px solid rgba(212,80,106,.45);margin-top:12px;text-align:center;padding:18px 14px">' +
         '<div class="ic" style="--c:#b42318;margin:0 auto 10px">' + mi("emergency", 28) + '</div>' +
@@ -236,9 +240,10 @@
             ? "Once the account owner fills their emergency details inside the app, they appear here automatically for responders without needing a password."
             : "بمجرد ما صاحب الحساب يسجّل بيانات الطوارئ من جوه التطبيق، بتظهر هنا تلقائيًا لأي مسعف بدون باسورد.") +
         '</div>' +
-        '<a class="bt w" style="margin-top:12px;background:#b42318;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:123">' +
+        sosBtn +
+        '<a class="bt o w" style="margin-top:8px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:123">' +
           mi("call") + " " + (isEn ? "Call Ambulance (123)" : "اتصال بالإسعاف (123)") +
-        '</a></div>';
+        '</a>' + offlineBadge + '</div>';
     }
     var fields = [
       ["n", isEn ? "Name" : "الاسم", "person"],
@@ -256,12 +261,12 @@
       return '<div class="rw" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><div class="ic" style="--c:#b42318;width:32px;height:32px">' + mi(f[2], 18) + '</div><span class="mu">' + f[1] + '</span></div><b dir="auto" style="font-weight:700;text-align:end">' + esc(val) + '</b></div>';
     }).join("");
     var callBtn = d.c2
-      ? '<a class="bt w" style="margin-top:12px;background:#b42318;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:' + esc(d.c2) + '">' +
+      ? '<a class="bt o w" style="margin-top:8px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:44px" href="tel:' + esc(d.c2) + '">' +
           mi("call") + " " + (isEn ? "Call Emergency Contact: " : "اتصال فوري بـ ") + esc(d.c1 || (isEn ? "Emergency Contact" : "جهة الطوارئ")) + " (" + esc(d.c2) + ")</a>"
       : "";
     return '<div class="cd" style="border:1.5px solid rgba(212,80,106,.5);margin-top:12px;text-align:start">' +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="ic" style="--c:#b42318">' + mi("emergency") + '</div><div class="g"><b style="font-size:16px;font-weight:700">' + (isEn ? "Emergency Responder Data" : "بيانات الطوارئ للمسعفين") + '</b><div class="mu" style="font-size:11.5px">' + (isEn ? "Open without password to assist the user" : "مفتوحة من برا بدون باسورد لمساعدة صاحب الحساب فورًا") + '</div></div></div>' +
-      rows + callBtn + '</div>';
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="ic" style="--c:#b42318">' + mi("emergency") + '</div><div class="g"><b style="font-size:16px;font-weight:700">' + (isEn ? "Emergency Responder Data" : "بيانات الطوارئ للمسعفين") + '</b><div class="mu" style="font-size:11.5px">' + (isEn ? "Open without password · Works offline ✓" : "مفتوحة من برا بدون باسورد · يعمل بدون إنترنت ✓") + '</div></div></div>' +
+      rows + sosBtn + callBtn + '</div>';
   };
 
   window.idcOuterPartitionsBarHtml = function () {
@@ -431,6 +436,7 @@
     S.nav = vault.nav || "home";
     S.otab = vault.otab || "data";
     S.pv = vault.pv || null;
+    S.bk = vault.bk || null;
     if (window.IDCPrivate) window.IDCPrivate.reset();
     S.pin = null;
     S.vpw = null;
@@ -697,6 +703,7 @@
     S.items = [];
     S.em = null;
     S.pv = null;
+    S.bk = null;
     S.pOwner = null;
     S.pin = null;
     S.vpw = null;
@@ -1123,6 +1130,7 @@
       S.p = null;
       S.items = [];
       S.pv = null;
+      S.bk = null;
       S.em = null;
       un = false;
       pk = false;

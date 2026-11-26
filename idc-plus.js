@@ -567,9 +567,113 @@
     };
   }
 
+  /* ---- Emergency SOS (Works 100% Offline via Cached Emergency Data + GPS + SMS/Share) ---- */
+  function readOfflineEmergency() {
+    var d = (typeof S !== "undefined" && S.em) ? S.em : null;
+    if (!d) {
+      try { d = JSON.parse(localStorage.getItem("idc_public_em_v1")) || null; } catch (e) {}
+    }
+    return d || defaultEmValues();
+  }
+
+  function buildSosMessage(d, coords) {
+    var lines = [L("🚨 استغاثة طوارئ (IDC SOS)", "🚨 IDC EMERGENCY SOS")];
+    if (d.n) lines.push(L("الاسم: ", "Name: ") + d.n);
+    if (d.bt) lines.push(L("فصيلة الدم: ", "Blood Type: ") + d.bt);
+    if (d.al) lines.push(L("الحساسية: ", "Allergies: ") + d.al);
+    if (d.ch || d.dz) lines.push(L("الحالة / الأدوية: ", "Conditions / Meds: ") + (d.ch || d.dz));
+    if (d.md) lines.push(L("أدوية حالية: ", "Meds: ") + d.md);
+    if (d.nt) lines.push(L("ملاحظات: ", "Notes: ") + d.nt);
+    if (coords) {
+      lines.push(L("الموقع الجغرافي: ", "Location: ") + "https://maps.google.com/?q=" + coords.lat + "," + coords.lon);
+    } else {
+      lines.push(L("الموقع: تعذّر تحديد GPS تلقائيًا (يعمل بدون إنترنت).", "Location: GPS unavailable (offline mode)."));
+    }
+    return lines.join("\n");
+  }
+
+  window.idcTriggerSOS = function () {
+    var d = readOfflineEmergency();
+    var phone = String(d.c2 || "").replace(/[^\d+]/g, "");
+    var openModal = function (coords) {
+      var msg = buildSosMessage(d, coords);
+      var encMsg = encodeURIComponent(msg);
+      var smsHref = "sms:" + encodeURIComponent(phone) + "?body=" + encMsg;
+      var waPhone = phone.replace(/^\+/, "");
+      var waHref = waPhone ? "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encMsg : "https://wa.me/?text=" + encMsg;
+      var telHref = "tel:" + (phone || "123");
+
+      var prev = document.getElementById("idcSosModal");
+      if (prev) prev.remove();
+      var o = document.createElement("div");
+      o.id = "idcSosModal";
+      o.className = "ov";
+      o.style.zIndex = 90;
+      o.innerHTML =
+        '<div>' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+            '<div class="ic" style="--c:#b42318">' + mi("sos", 26) + '</div>' +
+            '<div class="g"><b style="font-size:18px;color:#b42318">' + L("استغاثة طوارئ (SOS)", "Emergency SOS") + '</b>' +
+            '<div class="mu" style="font-size:12px">' + L("يعمل بدون إنترنت ✓ · جاهز للإرسال فورًا", "Works offline ✓ · Ready to send now") + '</div></div>' +
+            '<button class="ib" aria-label="إغلاق" id="sosClose">' + mi("close") + '</button>' +
+          '</div>' +
+          '<pre dir="auto" style="white-space:pre-wrap;background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:12px;font:inherit;font-size:12.5px;line-height:1.7;margin:0 0 12px;max-height:34vh;overflow:auto">' + esc(msg) + '</pre>' +
+          '<a class="bt w" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:#b42318;color:#fff;margin-bottom:8px" href="' + smsHref + '">' +
+            mi("sms") + " " + L("إرسال SMS فوري (بدون إنترنت)", "Send Instant SMS (Offline)") + (d.c1 ? " — " + esc(d.c1) : "") +
+          '</a>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+            '<a class="bt o" style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none" href="' + telHref + '">' + mi("call") + " " + L("اتصال فوري", "Call Now") + '</a>' +
+            '<a class="bt o" style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none" target="_blank" rel="noopener" href="' + waHref + '">' + mi("share") + " WhatsApp</a>" +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+            '<button class="bt o" id="sosCopy">' + mi("content_copy") + " " + L("نسخ الرسالة", "Copy Message") + '</button>' +
+            '<button class="bt o" id="sosShare">' + mi("ios_share") + " " + L("مشاركة", "Share") + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(o);
+      o.onclick = function (e) { if (e.target === o) o.remove(); };
+      o.querySelector("#sosClose").onclick = function () { o.remove(); };
+      o.querySelector("#sosCopy").onclick = function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(msg).then(function () { tst(L("تم نسخ رسالة الطوارئ ✓", "Emergency message copied ✓")); });
+        }
+      };
+      o.querySelector("#sosShare").onclick = function () {
+        if (navigator.share) {
+          navigator.share({ title: "IDC SOS", text: msg }).catch(function () {});
+        } else {
+          window.location.href = smsHref;
+        }
+      };
+    };
+
+    if (!navigator.geolocation) return openModal(null);
+    tst(L("جاري تحديد موقعك لإرسال SOS…", "Acquiring GPS for SOS…"));
+    var done = false;
+    var timer = setTimeout(function () { if (!done) { done = true; openModal(null); } }, 4000);
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        openModal({ lat: +pos.coords.latitude.toFixed(5), lon: +pos.coords.longitude.toFixed(5) });
+      },
+      function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        openModal(null);
+      },
+      { enableHighAccuracy: true, timeout: 3800, maximumAge: 60000 }
+    );
+  };
+
   function emPage() {
     var d = emSample ? SAMPLE : defaultEmValues();
     var ready = hasEmData(S.em);
+    var sosBanner = '<button class="bt w" style="display:flex;align-items:center;justify-content:center;gap:8px;height:50px;background:#b42318;color:#fff;font-weight:700;margin-bottom:10px" onclick="window.idcTriggerSOS()">' +
+      mi("sos", 24) + " " + L("🚨 استغاثة طوارئ (SOS) — إرسال الموقع والملف", "🚨 Emergency SOS — Send Location & Profile") + '</button>' +
+      '<div class="mu" style="text-align:center;font-size:12px;margin-bottom:10px">' + L("يعمل بدون إنترنت ✓ · بيانات الطوارئ محفوظة محليًا على الجهاز", "Works offline ✓ · Emergency data cached locally on device") + '</div>';
     if (ready && !emEdit && !emSample) {
       if (!emLink && !emGenerating) {
         emGenerating = true;
@@ -587,6 +691,7 @@
           mi("call") + " " + L("اتصال فوري بـ ", "Call ") + esc(d.c1 || L("جهة الطوارئ", "Emergency Contact")) + " (" + esc(d.c2) + ")</a>"
         : "";
       return pgh(L("بطاقة الطوارئ وكارت الـ NFC", "Emergency & NFC Card")) +
+        sosBanner +
         '<div class="cd" style="border:1.5px solid rgba(212,80,106,.35);margin-top:4px">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="ic" style="--c:#b42318">' + mi("emergency") + '</div><div class="g"><b style="font-size:17px;font-weight:700">' + L("بيانات الطوارئ السريعة", "Quick Emergency Info") + '</b><div class="mu" style="font-size:12px">' + L("متاحة بدون كلمة مرور لمساعدتك في الحالات الطارئة", "Available without a password to help you in emergencies") + "</div></div></div>" +
         rows +
@@ -600,6 +705,7 @@
     }).join("");
     var xpwField = fld("em_xpw", L("باسورد خارجي للكارت (لفتح الكارت على موبايل تاني جنب وضع الطوارئ)", "External Card Password (to unlock card on another phone alongside Emergency Mode)"), { t: "password", d: "ltr", v: d.xpw || "" });
     return pgh(L("بطاقة الطوارئ وكارت الـ NFC", "Emergency & NFC Card")) +
+      sosBanner +
       '<div class="nt" style="margin-top:0">' + L("أدخل البيانات المطلوب إظهارها لأي حد يفتح «وضع الطوارئ» في حالات الطوارئ، وحدد الباسورد الخارجي للكارت عشان لما يتفتح على موبايل تاني يظهر الباسورد الخارجي وجنبه وضع الطوارئ.", "Enter the details to show in 'Emergency Mode' without a password, and set an External Card Password so scanning your card on another phone shows External Password right next to Emergency Mode.") + "</div>" +
       (emSample ? '<div class="nt" style="color:var(--bl)">' + L("ده نموذج ببيانات تجريبية للمعاينة. اضغط «بياناتي أنا» وأدخل بياناتك الحقيقية.", "This is sample preview data. Tap 'My Data' to enter your real details.") + "</div>" : "") +
       fs + xpwField +

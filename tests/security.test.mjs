@@ -41,8 +41,10 @@ check("S14 SQL: RLS on, rate-limit fn is SECURITY DEFINER with empty search_path
 check("S15 SQL: parameterised only (no EXECUTE / dynamic SQL anywhere in migrations)", !/\bexecute\s+(format|'|\$)/i.test(sql + read("supabase/migrations/20261027000000_idc_vault.sql")));
 check("S16 no raw SQL string building in frontend or functions", !/(select|insert|update|delete)\s+[\w*,\s]+\s+(from|into|set)\s+['"`]?\s*\+/i.test(html + supa + vaultFn + uploadFn));
 check("S17 auth config: min password 12, confirmations on, signups rate limited, anon off", /minimum_password_length = 12/.test(cfg) && /enable_confirmations = true/.test(cfg) && /\[auth\.rate_limit\]/.test(cfg) && /enable_anonymous_sign_ins = false/.test(cfg));
-check("S18 no admin routes / pages / debug flags exist", !/(admin(\.html|\/|panel|mode|dashboard)|isAdmin|role\s*[:=]\s*["']admin|debug\s*[:=]\s*true|console\.(log|debug))/i.test(html + supa + read("idc-plus.js") + read("idc-private.js") + read("idc-settings.js") + read("idc-intro.js") + vaultFn + uploadFn));
+const bankSrc = fs.existsSync(path.join(ROOT, "idc-bank.js")) ? read("idc-bank.js") : "";
+check("S18 no admin routes / pages / debug flags exist", !/(admin(\.html|\/|panel|mode|dashboard)|isAdmin|role\s*[:=]\s*["']admin|debug\s*[:=]\s*true|console\.(log|debug))/i.test(html + supa + read("idc-plus.js") + read("idc-private.js") + read("idc-settings.js") + read("idc-intro.js") + bankSrc + vaultFn + uploadFn));
 const secretHit = ["index.html", "idc-supabase.js", "idc-plus.js", "idc-private.js", "idc-settings.js", "supabase-config.js", "supabase/functions/secure-vault/index.ts", "supabase/functions/secure-upload/index.ts"]
+  .concat(fs.existsSync(path.join(ROOT, "idc-bank.js")) ? ["idc-bank.js"] : [])
   .some((f) => /service_role|sk_live|BEGIN (RSA|EC|PRIVATE)|[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/.test(read(f)));
 check("S19 no secret/service-role keys or JWTs in shipped files (only the public publishable key)", !secretHit);
 const sqlOpt = fs.existsSync(path.join(ROOT, "supabase/migrations/20261122000000_idc_postgres_optimizations.sql"))
@@ -52,7 +54,7 @@ check("S20 Postgres best-practices migration adds indexes and initPlan-cached au
 check("S21 client caches public emergency storage and parallelizes independent async work", /memEmergencyCache/.test(supa) && /Promise\.all/.test(supa));
 const settingsSrc = read("idc-settings.js");
 check("S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule", /@media \(prefers-color-scheme:light\)/.test(settingsSrc) && /\.idc-st :focus-visible/.test(settingsSrc) && /@media \(prefers-reduced-motion:reduce\)/.test(settingsSrc));
-const allUiSrc = html + supa + read("idc-plus.js") + read("idc-private.js") + settingsSrc + read("idc-intro.js");
+const allUiSrc = html + supa + read("idc-plus.js") + read("idc-private.js") + settingsSrc + read("idc-intro.js") + bankSrc;
 const femRe = /ابدئي|سجّلي|سجلي|افتحي|اكتبي|أدخلي|ادخلي|تحققي|جرّبي|جربي|اختاري|أضيفي|ضيفي|(?:^|\s|")فعّلي|حاولي|تأكدي|اتأكدي|أكدي|أكديه|أنتِ|محتاجة|مش عارفة|كلمينا|لا تشاركيه|تقدري|تقدرين|حدديه|تحدديه|بتدخلي|تكمليه|أنشئي|اطلبي|تجاوزتي|استني|ارفعي|رتّبي|اجمعي|شاركي|صدّري|دوسي|قوليه|كلمي|شيلي|بلّغي|املي|كمّلي|تطلعي|تخرجي|تعدّلي|قلّلي|قرّبي|انسخي|حطي|سيبيه|تحسي\s|تدوسي|تحذفي|عايزاها|معاكي|بتعرفيها|صاحبة الكارت|بتفتحيه|تبلّغ عن|متأكدة؟|تحتاجيها/;
 const femMatch = allUiSrc.match(femRe);
 check("S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)", !femMatch, femMatch ? "Found: " + femMatch[0] : "");
@@ -82,6 +84,10 @@ check("S33 speed-engineer profile persisted in AGENTS.md with Tier S and speed-e
 const docsSrc = read("SECURITY.md") + read("SETUP.md") + read("README.md");
 const docsFemMatch = (read("SECURITY.md") + read("SETUP.md")).match(/فعّليها|فعّلي|راجعي|أنشئي|ضعي|وأضيفيه|اضبطي|انسخي|ثبّتي|وسجّلي|شغّلي|أضيفي|تستخدمي|اختاري|اخترتِ|تحطي|عايزة|اعملي|وتأكدي/);
 check("S34 writing-guidelines: SECURITY.md, SETUP.md, and README.md are 100% gender-neutral and document authorize-route", !docsFemMatch && /authorize-route/.test(docsSrc), docsFemMatch ? "Found in docs: " + docsFemMatch[0] : "");
+check("S35 Emergency SOS button sends GPS location + emergency profile and works offline", /idcTriggerSOS/.test(plusSrc + supa) && /maps\.google\.com/.test(plusSrc + supa));
+const privSrc = read("idc-private.js");
+check("S36 Private partition supports Duress PIN (decoy vault without decrypting real vault)", /duressHash/.test(privSrc) && /duressMode/.test(privSrc) && /DECOY_ITEMS/.test(privSrc));
+check("S37 Card Bank implements spending limit (linear bar + 80% warn + block), hide balance (10s auto-rehide + biometric), 5 categories breakdown, and <=30d expiry alert", /bk-pg/.test(bankSrc) && /0\.8/.test(bankSrc) && /10000/.test(bankSrc) && /expDays/.test(bankSrc) && /transport/.test(bankSrc) && /bills/.test(bankSrc));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };

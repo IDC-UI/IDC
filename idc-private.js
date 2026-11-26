@@ -9,9 +9,15 @@
   "use strict";
 
   var pvKey = null;          // Uint8Array while the private partition is open, else null
+  var duressMode = false;    // true when unlocked with Duress PIN (decoy vault; real vault stays sealed!)
   var openedAt = 0, lastAct = Date.now();
   var busy = false, mode = "unlock", hideTimer = null, bioCache = null;
   var FAIL_KEY = "idc_pv_fail";
+  var DECOY_ITEMS = [
+    { id: "decoy1", mode: "on", level: "private", type: "other", title: "قائمة مشتريات البيت", value: "لبن، خبز، فاكهة، خضروات", issuer: "" },
+    { id: "decoy2", mode: "on", level: "private", type: "doc", title: "إيصال إنترنت منزلي", value: "رقم الاشتراك 022349182 — مسدد", issuer: "" },
+    { id: "decoy3", mode: "on", level: "private", type: "other", title: "ملاحظات عامة", value: "مراجعة المواعيد الأسبوعية", issuer: "" }
+  ];
   var idleInterval = null;
   function startIdleWatch() {
     if (idleInterval) return;
@@ -133,18 +139,23 @@
     if (!S.pv) return items;
     return items.filter(function (i) { return !isPriv(i); });
   }
-  function reset() { pvKey = null; if (window.pk) pk = false; openedAt = 0; stopIdleWatch(); }
+  function reset() { pvKey = null; duressMode = false; if (window.pk) pk = false; openedAt = 0; stopIdleWatch(); }
   function hardWipe() { S.items = S.items.filter(function (i) { return !isPriv(i); }); reset(); }
 
   function lockNow(reason) {
-    if (!pvKey) return Promise.resolve();
+    if (!pvKey && !duressMode) return Promise.resolve();
+    if (duressMode && !pvKey) {
+      duressMode = false; pk = false; openedAt = 0; stopIdleWatch();
+      if (reason !== "leave") R();
+      return Promise.resolve();
+    }
     var key = pvKey, secs = Math.round((Date.now() - openedAt) / 1000);
     var items = S.items.filter(isPriv);
     var canSave = Boolean(S.p && S.pv && real());
     S.items = S.items.filter(function (i) { return !isPriv(i); });   // wipe plaintext immediately
-    pvKey = null; pk = false; openedAt = 0; stopIdleWatch();
+    pvKey = null; duressMode = false; pk = false; openedAt = 0; stopIdleWatch();
     var labels = {
-      leave: L("خرجتِ من القسم الخاص", "Left the private section"),
+      leave: L("تم الخروج من القسم الخاص", "Left the private section"),
       idle: L("قفل تلقائي بعد 60 ثانية خمول", "Auto-locked after 60s idle"),
       bg: L("التطبيق راح للخلفية", "App went to background"),
       manual: L("قفل يدوي", "Locked manually")
@@ -250,6 +261,7 @@
       fld("pvE", L("جيميل مختلف (Second Gmail)", "Different Gmail address"), { t: "email", d: "ltr" }) +
       pw("pvB", L("باسورد الجيميل المختلف (6 حروف أو أرقام على الأقل)", "Second-Gmail password (at least 6 chars)")) + pw("pvB2", L("تأكيد باسورد الجيميل المختلف", "Confirm second-Gmail password")) +
       pw("pvC", L("الباسورد التاني الإضافي (6 حروف أو أرقام على الأقل)", "Extra password (at least 6 chars)")) + pw("pvC2", L("تأكيد الباسورد الإضافي", "Confirm extra password")) +
+      pw("pvD", L("كود الإكراه — Duress PIN (اختياري، 4–8 أرقام يفتح قسمًا وهميًا عند الإجبار)", "Duress PIN (optional, 4–8 chars opens a decoy vault under coercion)")) +
       eyeBtn() +
       '<div class="pvhint">' + L("• الثلاث باسوردات لازم يكونوا مختلفين عن بعض لتأمين الداتا.<br>• عند فتح القسم هيظهر سجل كامل (إمتى وفين وإزاي اتفتح)، وبمجرد خروجك من البارتيشن هيتقفل تاني تلقائيًا.", "• All three passwords must be distinct to secure your data.<br>• Opening the section records when, where, and how it was accessed, and leaving the partition locks it automatically.") + "</div>" +
       bioLine + '<div class="err" id="pvErr"></div>' +
@@ -296,6 +308,10 @@
   }
 
   function openView() {
+    if (duressMode) {
+      return '<div class="pvban"><div style="color:var(--gn)">' + mi("verified_user", 30) + '</div><div class="g"><b>' + L("القسم الخاص مفتوح الآن", "Private section is open") + "</b><div>" + L("فور الخروج من البارتيشن ده هيتقفل تاني تلقائيًا لتأمين بياناتك.", "As soon as you leave this partition, it locks again automatically.") + '</div></div><button class="bt o" style="height:36px;padding:0 14px" onclick="IDCPrivate.lock()">' + L("قفل الآن", "Lock now") + "</button></div>" +
+        DECOY_ITEMS.map(item).join("");
+    }
     return '<div class="pvban"><div style="color:var(--gn)">' + mi("verified_user", 30) + '</div><div class="g"><b>' + L("القسم الخاص مفتوح الآن", "Private section is open") + "</b><div>" + L("فور الخروج من البارتيشن ده هيتقفل تاني تلقائيًا لتأمين بياناتك.", "As soon as you leave this partition, it locks again automatically.") + '</div></div><button class="bt o" style="height:36px;padding:0 14px" onclick="IDCPrivate.lock()">' + L("قفل الآن", "Lock now") + "</button></div>" +
       addb("on", "private") + list("on", "private") + logHTML();
   }
@@ -348,7 +364,16 @@
       var key = await window.IDCrypto.fromPass(material(a, e2, b, c), salt);
       var existing = S.items.filter(isPriv);
       var ct = await window.IDCrypto.enc({ v: 1, items: existing, at: Date.now() }, key);
-      S.pv = { v: 1, salt: b64(salt), ct: ct, e2: e2, bio: ids, at: Date.now() };
+      var dPin = raw("pvD").trim();
+      var duressSalt = null, duressHash = null;
+      if (dPin && dPin.length >= 4 && dPin !== a && dPin !== b && dPin !== c) {
+        var ds = crypto.getRandomValues(new Uint8Array(16));
+        var dh = await window.IDCrypto.fromPass("duress:" + dPin, ds);
+        duressSalt = b64(ds);
+        duressHash = b64(dh);
+      }
+      S.pv = { v: 1, salt: b64(salt), ct: ct, e2: e2, bio: ids, at: Date.now(), duressSalt: duressSalt, duressHash: duressHash };
+      duressMode = false;
       pvKey = key; pk = true; openedAt = Date.now(); lastAct = Date.now(); startIdleWatch();
       if (window.IDCPersist) {
         try { await window.IDCPersist(); } catch (e) {}
@@ -405,6 +430,24 @@
     var left = lockLeft();
     if (left) return showErr(L("القسم مقفول مؤقتًا، جرّب بعد ", "Temporarily locked, try in ") + fmtSec(left));
     var a = raw("pvA"), b = raw("pvB"), c = raw("pvC");
+    if (S.pv && S.pv.duressHash && S.pv.duressSalt && (a || b || c)) {
+      var candidates = [a, b, c].filter(Boolean);
+      for (var di = 0; di < candidates.length; di++) {
+        try {
+          var candHash = b64(await window.IDCrypto.fromPass("duress:" + candidates[di].trim(), ub64(S.pv.duressSalt)));
+          if (candHash === S.pv.duressHash) {
+            duressMode = true;
+            pvKey = null;
+            pk = false;
+            openedAt = Date.now();
+            lastAct = Date.now();
+            addLog({ ev: "open", s: 1, how: L("دخول كود الإكراه (قسم وهمي)", "Duress PIN decoy opened"), where: null });
+            R();
+            return;
+          }
+        } catch (e) {}
+      }
+    }
     if (!a || !b || !c) return showErr(L("أدخل كلمات المرور الثلاث.", "Enter all three passwords."));
     setBusy(true); showErr("");
     var wherePromise = getWhere();           // starts the location prompt in parallel
@@ -460,7 +503,7 @@
     var tabs = '<div class="tabs">' + [["public", "عامة"], ["private", "خاصة"], ["secret", "سرية"]].map(function (x) {
       return '<button class="' + (S.tab === x[0] ? "on" : "") + '" onclick="go({tab:\'' + x[0] + '\'})">' + x[1] + "</button>";
     }).join("") + "</div>";
-    return '<h2 style="font-size:24px;font-weight:700;margin-bottom:12px">محفظتي</h2>' + tabs + (pvKey ? openView() : (S.pv ? unlockView() : setupView()));
+    return '<h2 style="font-size:24px;font-weight:700;margin-bottom:12px">محفظتي</h2>' + tabs + ((pvKey || duressMode) ? openView() : (S.pv ? unlockView() : setupView()));
   };
 
   var baseRender = window.R;
@@ -493,7 +536,7 @@
     reset: reset,
     setup: doSetup,
     unlock: doUnlock,
-    lock: function () { lockNow("manual"); },
+    lock: function () { duressMode = false; lockNow("manual"); },
     open: function () { pg = null; dr = false; go({ nav: "wallet", tab: "private" }); },
     openEmergency: function () { pg = { k: "emerg" }; R(); },
     setMode: function (m) { mode = m; R(); },
