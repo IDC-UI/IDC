@@ -1265,7 +1265,11 @@
     if (bi) bi.onclick = function () { dip.prompt(); dip.userChoice.then(function () { d.remove(); }); };
   }
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+        try { reg.update(); } catch (e) {}
+      }).catch(function () {});
+    });
   }
   setTimeout(ib, 2500);
   loadEm();

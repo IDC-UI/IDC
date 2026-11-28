@@ -171,7 +171,7 @@ const cryptoSrc = plusLines.slice(10, 47).join("\n"); // real b64/ub64 + IDCrypt
 const USER = { id: "11111111-2222-4333-8444-555555555555", email: "maria@example.com", user_metadata: { display_name: "Maria" } };
 const GOOD_PW = "correct-horse-9battery";
 
-function boot({ session = null, remoteRow = null, signIn, signUp, verifyOtp, localStore = {}, invokeOk = true } = {}) {
+function boot({ session = null, remoteRow = null, signIn, signUp, verifyOtp, resetEmail, localStore = {}, invokeOk = true } = {}) {
   const store = new Map(Object.entries(localStore));
   const calls = { signIn: 0, signUp: 0, directUpsert: 0, remoteDelete: 0, invoke: 0, signOut: 0, resetEmail: 0, verifyOtp: 0, updateUser: 0 };
   const handlers = [];
@@ -195,7 +195,7 @@ function boot({ session = null, remoteRow = null, signIn, signUp, verifyOtp, loc
       getSession: async () => ({ data: { session: { access_token: "t" } } }),
       getUser: async () => ({ data: { user: USER }, error: null }),
       onAuthStateChange: (cb) => { handlers.push(cb); if (session) setTimeout(() => cb("INITIAL_SESSION", session), 0); },
-      resetPasswordForEmail: async () => { calls.resetEmail++; return { error: null }; },
+      resetPasswordForEmail: async (e, o) => { calls.resetEmail++; return resetEmail ? resetEmail(e, o) : { error: null }; },
       verifyOtp: async (a) => { calls.verifyOtp++; return verifyOtp ? verifyOtp(a) : { data: { user: USER, session: { access_token: "t" } }, error: null }; },
       updateUser: async (a) => { calls.updateUser++; ctx.__updatedUser = a; return { data: { user: USER }, error: null }; },
       resend: async () => ({ error: null }),
@@ -626,6 +626,18 @@ let savedBody;
     await tick(20);
     check("T14e clicking Reset Password email link (PASSWORD_RECOVERY) opens f3 password form instead of getting stuck on Lock Screen",
       !/المحفظة مقفولة/.test(linkRec.app.innerHTML) && linkRec.ctx.au.m === "f3" && linkRec.ctx.S.screen === "auth");
+
+    // T14f: 429 / over_email_send_rate_limit detected via code/status (even if message is generic), preserves typed email, and SW bypasses stale HTTP disk cache
+    const rateLimited = boot({
+      resetEmail: async () => ({ error: { message: "Request failed", code: "over_email_send_rate_limit", status: 429 } })
+    });
+    rateLimited.form.fp = "htff7965@gmail.com";
+    await rateLimited.ctx.doF1();
+    check("T14f 429 over_email_send_rate_limit detected via error.code/status, preserves typed email, and SW revalidates HTTP cache",
+      /رسالتان في الساعة/.test(rateLimited.ctx.err) &&
+      rateLimited.ctx.au.d.em === "htff7965@gmail.com" &&
+      /updateViaCache:\s*"none"/.test(plusSrc) &&
+      /cache:\s*'no-cache'/.test(sw));
   } else {
     check("T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function", false, "doVerifyResetOtp or recKey missing");
     check("T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss", false, "doVerifyResetOtp missing");

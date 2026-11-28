@@ -135,8 +135,8 @@
   }
 
   function appError(error) {
-    var message = String(error && (error.message || error.code) || "");
-    if (/over_email_send_rate_limit|rate limit|too many requests|after \d+ seconds/i.test(message)) {
+    var message = [error && error.message, error && error.code, error && error.error_code, error && error.status].filter(Boolean).join(" ");
+    if (/\b429\b|over_email_send_rate_limit|over_request_rate_limit|rate limit|too many requests|after \d+ seconds/i.test(message)) {
       return "تم تجاوز الحد المؤقت لإرسال رسائل البريد في Supabase (رسالتان في الساعة للخدمة المجانية). انتظر قليلًا أو افتح آخر رسالة وصلتك.";
     }
     if (/email not confirmed/i.test(message)) return "أكّد بريدك الإلكتروني من الرابط المرسل ثم سجّل الدخول.";
