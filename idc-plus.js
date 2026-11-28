@@ -410,8 +410,426 @@
     }
   };
 
+  /* ---- Direct LinkedIn URL Normalizer & One-Tap Profile Opener ---- */
+  window.idcNormalizeHttpsUrl = function (raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    if (!s || /[\s<>]/.test(s)) return "";
+    if (/^(javascript|data|vbscript|file|blob|http):/i.test(s)) return "";
+    if (!/^https:\/\//i.test(s)) {
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s)) return "";
+      s = "https://" + s.replace(/^\/+/, "");
+    }
+    try {
+      var u = new URL(s);
+      if (u.protocol !== "https:" || !/\.[a-z]{2,}$/i.test(u.hostname)) return "";
+      return u.href;
+    } catch (e) {
+      return "";
+    }
+  };
+
+  window.idcOpenLinkedIn = function (forceEdit) {
+    var p = (typeof S !== "undefined" && S.p) ? S.p : null;
+    var saved = p && p.linkedin ? window.idcNormalizeHttpsUrl(p.linkedin) : "";
+    if (saved && !forceEdit) {
+      if (p.linkedin !== saved) {
+        p.linkedin = saved;
+        if (typeof sv === "function") sv();
+      }
+      if (typeof window.open === "function") {
+        window.open(saved, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+
+    var prev = document.getElementById("idcLiModal");
+    if (prev) prev.remove();
+    var o = document.createElement("div");
+    o.id = "idcLiModal";
+    o.className = "ov";
+    o.style.zIndex = 90;
+    o.innerHTML =
+      '<div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+          '<div class="ic" style="--c:#0a66c2">' + mi("open_in_new", 22) + '</div>' +
+          '<div class="g"><b style="font-size:18px">' + L("رابط بروفايل LinkedIn", "LinkedIn Profile Link") + '</b>' +
+          '<div class="mu" style="font-size:12px">' + L("يُحفظ مرة واحدة ليفتح بروفايلك مباشرة بضغطة واحدة", "Saved once so tapping LinkedIn opens your profile directly") + '</div></div>' +
+          '<button class="ib" aria-label="إغلاق" id="liClose">' + mi("close") + '</button>' +
+        '</div>' +
+        '<div class="f" style="margin-top:10px">' +
+          '<input id="liUrlInp" type="url" dir="ltr" placeholder=" " value="' + esc(saved || (p && p.linkedin) || "") + '">' +
+          '<label for="liUrlInp" class="up">https://www.linkedin.com/in/username</label>' +
+        '</div>' +
+        '<div class="err" id="liErr"></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">' +
+          '<button class="bt o" type="button" id="liSaveOnly">' + L("حفظ الرابط", "Save Link") + '</button>' +
+          '<button class="bt" type="button" id="liSaveOpen">' + L("حفظ وفتح LinkedIn", "Save & Open") + '</button>' +
+        '</div>' +
+        (saved ? '<button class="bt t w" type="button" style="color:var(--rd);margin-top:8px" id="liRemove">' + L("حذف الرابط المحفوظ", "Remove saved link") + '</button>' : '') +
+      '</div>';
+    document.body.appendChild(o);
+    o.onclick = function (e) { if (e.target === o) o.remove(); };
+    var closeBtn = o.querySelector("#liClose");
+    if (closeBtn) closeBtn.onclick = function () { o.remove(); };
+    var applySave = function (openAfter) {
+      var inp = document.getElementById("liUrlInp");
+      var errEl = document.getElementById("liErr");
+      var rawVal = inp ? inp.value : "";
+      var norm = window.idcNormalizeHttpsUrl(rawVal);
+      if (!norm) {
+        if (errEl) errEl.textContent = L("يرجى إدخال رابط صحيح (مثل linkedin.com/in/username)", "Please enter a valid HTTPS URL (e.g. linkedin.com/in/username)");
+        return;
+      }
+      if (typeof S !== "undefined") {
+        S.p = S.p || { n: "", nid: "", bd: "", ph: "", ct: "", role: "student" };
+        S.p.linkedin = norm;
+        if (typeof sv === "function") sv();
+      }
+      o.remove();
+      if (typeof R === "function") R();
+      tst(L("تم حفظ رابط LinkedIn ✓", "LinkedIn link saved ✓"));
+      if (openAfter && typeof window.open === "function") {
+        window.open(norm, "_blank", "noopener,noreferrer");
+      }
+    };
+    var bSave = o.querySelector("#liSaveOnly");
+    if (bSave) bSave.onclick = function () { applySave(false); };
+    var bOpen = o.querySelector("#liSaveOpen");
+    if (bOpen) bOpen.onclick = function () { applySave(true); };
+    var bRem = o.querySelector("#liRemove");
+    if (bRem) bRem.onclick = function () {
+      if (typeof S !== "undefined" && S.p) {
+        S.p.linkedin = "";
+        if (typeof sv === "function") sv();
+      }
+      o.remove();
+      if (typeof R === "function") R();
+      tst(L("تم حذف رابط LinkedIn", "LinkedIn link removed"));
+    };
+  };
+
+  /* ---- Hourly Temporary Share (#s=...) for CV / Public Profile / Both ---- */
+  var CV_ITEM_TYPES = ["edu", "exp", "skill", "proj", "cert", "course"];
+  function clampShareHours(h) {
+    var n = Math.round(Number(h));
+    if (!n || isNaN(n) || n < 1) return 4;
+    if (n > 168) return 168;
+    return n;
+  }
+  function fmtRemaining(expMs, nowMs) {
+    var diff = Math.max(0, expMs - (nowMs || Date.now()));
+    var mins = Math.ceil(diff / 60000);
+    var hrs = Math.floor(mins / 60);
+    var remM = mins % 60;
+    if (hrs > 0) return L(hrs + " ساعة" + (remM ? " و " + remM + " د" : ""), hrs + "h" + (remM ? " " + remM + "m" : ""));
+    return L(mins + " دقيقة", mins + "m");
+  }
+
+  window.IDCTempShare = {
+    buildLink: function (opts) {
+      opts = opts || {};
+      var scope = opts.scope === "cv" || opts.scope === "profile" ? opts.scope : "both";
+      var hours = clampShareHours(opts.hours);
+      var now = typeof opts.nowMs === "number" ? opts.nowMs : Date.now();
+      var exp = now + hours * 3600000;
+      var p = (typeof S !== "undefined" && S.p) || {};
+      var li = window.idcNormalizeHttpsUrl(p.linkedin || "");
+      var allPub = ((typeof S !== "undefined" && Array.isArray(S.items)) ? S.items : []).filter(function (i) {
+        return i && (typeof lv === "function" ? lv(i) : i.level) === "public";
+      });
+      var payload = {
+        v: 1,
+        sc: scope,
+        exp: exp,
+        hrs: hours,
+        n: String(p.n || "").slice(0, 100),
+        rl: String(p.role || "student").slice(0, 20),
+        ct: String(p.ct || "").slice(0, 60)
+      };
+      if (li) payload.li = li;
+      if (scope === "profile" || scope === "both") {
+        if (p.ph) payload.ph = String(p.ph).slice(0, 30);
+        payload.pub = allPub.filter(function (i) {
+          return CV_ITEM_TYPES.indexOf(i.type) === -1 && i.type !== "id";
+        }).slice(0, 12).map(function (i) {
+          return [String(i.title || "").slice(0, 120), String(i.value || "").slice(0, 300), String(i.issuer || "").slice(0, 80)];
+        });
+      }
+      if (scope === "cv" || scope === "both") {
+        payload.cv = allPub.filter(function (i) {
+          return CV_ITEM_TYPES.indexOf(i.type) > -1;
+        }).slice(0, 30).map(function (i) {
+          return [String(i.type || ""), String(i.title || "").slice(0, 120), String(i.value || "").slice(0, 400), String(i.issuer || "").slice(0, 80)];
+        });
+      }
+      var token = b64Json(payload);
+      var url = location.origin + location.pathname + "#s=" + token;
+      return { url: url, exp: exp, scope: scope, hours: hours };
+    },
+    parseHash: function (hashStr, nowMs) {
+      var h = String(hashStr == null ? location.hash : hashStr);
+      var m = h.match(/^#s=([A-Za-z0-9_-]+)$/);
+      if (!m) return { active: false, invalid: true, data: null };
+      var obj;
+      try {
+        obj = ub64Json(m[1]);
+      } catch (e) {
+        return { active: false, invalid: true, data: null };
+      }
+      if (!obj || obj.v !== 1 || typeof obj.exp !== "number" || (obj.sc !== "cv" && obj.sc !== "profile" && obj.sc !== "both")) {
+        return { active: false, invalid: true, data: null };
+      }
+      var now = typeof nowMs === "number" ? nowMs : Date.now();
+      if (now > obj.exp) {
+        return { active: false, expired: true, exp: obj.exp, data: null };
+      }
+      return {
+        active: true,
+        expired: false,
+        data: {
+          scope: obj.sc,
+          exp: obj.exp,
+          hours: obj.hrs || 4,
+          n: String(obj.n || ""),
+          rl: String(obj.rl || "student"),
+          ct: String(obj.ct || ""),
+          ph: String(obj.ph || ""),
+          li: window.idcNormalizeHttpsUrl(obj.li || ""),
+          pub: Array.isArray(obj.pub) ? obj.pub : [],
+          cv: Array.isArray(obj.cv) ? obj.cv : []
+        }
+      };
+    },
+    openModal: function (defaultScope) {
+      var selScope = defaultScope === "cv" || defaultScope === "profile" ? defaultScope : "both";
+      var selHours = 4;
+      var prev = document.getElementById("idcTempShareModal");
+      if (prev) prev.remove();
+      var o = document.createElement("div");
+      o.id = "idcTempShareModal";
+      o.className = "ov";
+      o.style.zIndex = 90;
+
+      var draw = function () {
+        var active = (typeof S !== "undefined" && S.tempShare && S.tempShare.exp > Date.now()) ? S.tempShare : null;
+        var scopeOpts = [
+          ["cv", L("الـ CV فقط", "CV Only")],
+          ["profile", L("البروفايل العام فقط", "Profile Only")],
+          ["both", L("الاثنين معًا", "Both (Profile + CV)")]
+        ];
+        var hourPresets = [4, 7, 24];
+        var scopeLabels = { cv: L("الـ CV فقط", "CV Only"), profile: L("البروفايل العام فقط", "Profile Only"), both: L("البروفايل + الـ CV", "Profile + CV") };
+
+        o.innerHTML =
+          '<div>' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+              '<div class="ic" style="--c:var(--bl)">' + mi("schedule_send", 24) + '</div>' +
+              '<div class="g"><b style="font-size:18px">' + L("مشاركة مؤقتة برابط خارجي", "Temporary External Share Link") + '</b>' +
+              '<div class="mu" style="font-size:12px">' + L("ينتهي الرابط تلقائيًا فور انقضاء الساعات المحددة", "Automatically expires once the chosen hours pass") + '</div></div>' +
+              '<button class="ib" aria-label="إغلاق" id="tsClose">' + mi("close") + '</button>' +
+            '</div>' +
+            (active ? (
+              '<div class="cd" style="border:1.5px solid var(--gn);background:color-mix(in srgb,var(--gn) 8%,var(--cd));margin-bottom:14px">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+                  '<b style="color:var(--gn);font-size:13.5px">✓ ' + L("رابط مؤقت نشط", "Active Temporary Link") + ' (' + esc(scopeLabels[active.scope] || "") + ')</b>' +
+                  '<span class="ch ok" style="margin:0">' + L("باقي ", "Left: ") + esc(fmtRemaining(active.exp)) + '</span>' +
+                '</div>' +
+                '<div dir="ltr" class="mu" style="font-size:11px;word-break:break-all;background:var(--sf);padding:8px;border-radius:10px;margin:8px 0">' + esc(active.url) + '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+                  '<button class="bt" type="button" id="tsCopyActive" style="height:38px">' + mi("content_copy", 18) + " " + L("نسخ الرابط", "Copy Link") + '</button>' +
+                  '<button class="bt o" type="button" id="tsShareActive" style="height:38px">' + mi("share", 18) + " " + L("مشاركة", "Share") + '</button>' +
+                '</div>' +
+              '</div>'
+            ) : '') +
+            '<div class="mu" style="font-size:12.5px;font-weight:700;margin-bottom:6px">' + L("1. اختر المحتوى الذي يظهر عند فتح الرابط:", "1. Choose what opens in the link:") + '</div>' +
+            '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">' +
+              scopeOpts.map(function (so) {
+                var on_ = selScope === so[0];
+                return '<button type="button" class="bt ' + (on_ ? "" : "o") + '" data-scope="' + so[0] + '" aria-pressed="' + on_ + '" style="height:40px;padding:0 6px;font-size:12px">' + so[1] + '</button>';
+              }).join("") +
+            '</div>' +
+            '<div class="mu" style="font-size:12.5px;font-weight:700;margin-bottom:6px">' + L("2. مدة الصلاحية بالساعات:", "2. Expiration in hours:") + '</div>' +
+            '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">' +
+              hourPresets.map(function (hr) {
+                var on_ = selHours === hr;
+                return '<button type="button" class="bt ' + (on_ ? "" : "o") + '" data-hr="' + hr + '" aria-pressed="' + on_ + '" style="height:40px;padding:0 8px;font-size:13px">' + hr + " " + L("ساعات", "hours") + '</button>';
+              }).join("") +
+            '</div>' +
+            '<div class="f" style="margin-top:10px">' +
+              '<input id="tsCustomHrs" type="number" min="1" max="168" dir="ltr" placeholder=" " value="' + selHours + '">' +
+              '<label for="tsCustomHrs" class="up">' + L("أو اكتب عدد ساعات مخصص (1 إلى 168 ساعة)", "Or enter custom hours (1 to 168h)") + '</label>' +
+            '</div>' +
+            '<button class="bt w" type="button" id="tsCreate" style="margin-top:12px">' + mi("link") + " " + L("إنشاء ونسخ الرابط المؤقت", "Create & Copy Temporary Link") + '</button>' +
+          '</div>';
+
+        var cl = o.querySelector("#tsClose");
+        if (cl) cl.onclick = function () { o.remove(); };
+        var scBtns = o.querySelectorAll("[data-scope]");
+        for (var i = 0; i < scBtns.length; i++) {
+          (function (btn) {
+            btn.onclick = function () { selScope = btn.getAttribute("data-scope"); draw(); };
+          })(scBtns[i]);
+        }
+        var hrBtns = o.querySelectorAll("[data-hr]");
+        for (var j = 0; j < hrBtns.length; j++) {
+          (function (btn) {
+            btn.onclick = function () { selHours = parseInt(btn.getAttribute("data-hr"), 10); draw(); };
+          })(hrBtns[j]);
+        }
+        var customInp = o.querySelector("#tsCustomHrs");
+        if (customInp) {
+          customInp.oninput = function () {
+            var vNum = parseInt(customInp.value, 10);
+            if (vNum >= 1 && vNum <= 168) selHours = vNum;
+          };
+        }
+        var mkBtn = o.querySelector("#tsCreate");
+        if (mkBtn) {
+          mkBtn.onclick = function () {
+            var inpEl = o.querySelector("#tsCustomHrs");
+            var hrs = clampShareHours(inpEl ? inpEl.value : selHours);
+            selHours = hrs;
+            var res = window.IDCTempShare.buildLink({ scope: selScope, hours: hrs });
+            if (typeof S !== "undefined") {
+              S.tempShare = res;
+              if (typeof sv === "function") sv();
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(res.url).catch(function () {});
+            }
+            tst(L("تم إنشاء ونسخ الرابط المؤقت (" + hrs + " ساعات) ✓", "Temporary link created & copied (" + hrs + "h) ✓"));
+            draw();
+          };
+        }
+        var cpBtn = o.querySelector("#tsCopyActive");
+        if (cpBtn && active) {
+          cpBtn.onclick = function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(active.url).then(function () {
+                tst(L("تم نسخ الرابط المؤقت ✓", "Temporary link copied ✓"));
+              });
+            }
+          };
+        }
+        var shBtn = o.querySelector("#tsShareActive");
+        if (shBtn && active) {
+          shBtn.onclick = function () {
+            if (navigator.share) {
+              navigator.share({ title: "IDC", url: active.url }).catch(function () {});
+            } else if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(active.url).then(function () {
+                tst(L("تم نسخ الرابط للمشاركة ✓", "Link copied to share ✓"));
+              });
+            }
+          };
+        }
+      };
+
+      document.body.appendChild(o);
+      o.onclick = function (e) { if (e.target === o) o.remove(); };
+      draw();
+    }
+  };
+
+  function tempShareView() {
+    var res = window.IDCTempShare.parseHash(location.hash, Date.now());
+    var topBar = '<div class="bar" style="padding-top:4px">' +
+      wm().replace('class="wm"', 'class="wm" style="font-size:24px;text-align:start"') +
+      '<span style="flex:1"></span>' +
+      '<button class="bt t" style="font-weight:700" onclick="setLang(S.lang===\'en\'?\'ar\':\'en\')">' + (S.lang === "en" ? "العربية" : "EN") + "</button>" +
+      "</div>";
+    if (!res.active) {
+      var expTitle = res.expired
+        ? L("انتهت صلاحية هذا الرابط المؤقت", "This temporary link has expired")
+        : L("رابط المشاركة غير صالح", "Invalid share link");
+      var expMsg = res.expired
+        ? L("انتهت الساعات المحددة لمشاركة هذا الملف وتم إغلاق الوصول تلقائيًا لحماية خصوصية صاحب الحساب.", "The hours set for sharing this profile/CV have elapsed and access has closed automatically.")
+        : L("تأكد من نسخ رابط المشاركة المؤقت كاملًا بدون اقتطاع.", "Make sure the temporary share link was copied completely.");
+      return '<div class="sx">' + topBar +
+        '<div class="ac" style="text-align:center;margin-top:16px">' +
+          '<div class="ic" style="--c:var(--rd);margin:0 auto 12px;width:52px;height:52px">' + mi("timer_off", 28) + '</div>' +
+          '<h2 style="font-size:21px;font-weight:700;margin-bottom:8px">' + expTitle + '</h2>' +
+          '<div class="mu" style="line-height:1.8">' + expMsg + '</div>' +
+        '</div></div>';
+    }
+    var d = res.data;
+    var roleText = (window.RL && RL[d.rl]) ? (S.lang === "en" ? (typeof T === "function" ? T(RL[d.rl][0]) : RL[d.rl][0]) : RL[d.rl][0]) : "";
+    var subLine = roleText + (d.ct ? (roleText ? " · " : "") + d.ct : "");
+    var remBadge = '<div class="cd" style="display:flex;justify-content:space-between;align-items:center;gap:8px;border:1.5px solid var(--gn);background:color-mix(in srgb,var(--gn) 8%,var(--cd))">' +
+      '<span style="font-weight:700;font-size:13px;color:var(--gn)">' + mi("schedule", 18) + " " + L("عرض خارجي مؤقت وموثّق", "Verified Temporary Share") + '</span>' +
+      '<span class="ch ok" style="margin:0">' + L("ينتهي خلال ", "Expires in ") + esc(fmtRemaining(d.exp)) + '</span>' +
+    '</div>';
+
+    var liBtn = d.li
+      ? '<a class="bt o w" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin-top:10px" target="_blank" rel="noopener noreferrer" href="' + esc(d.li) + '">' +
+          mi("open_in_new", 18) + " " + L("فتح بروفايل LinkedIn مباشرة", "Open LinkedIn Profile") + '</a>'
+      : "";
+
+    var profBlock = "";
+    if (d.scope === "profile" || d.scope === "both") {
+      var rw = function (lbl, val) {
+        return val ? '<div class="rw"><span class="mu">' + lbl + '</span><b dir="auto" style="font-weight:600">' + esc(val) + '</b></div>' : "";
+      };
+      profBlock = '<div class="cd">' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">' +
+          '<div class="av" style="width:48px;height:48px;font-size:20px;cursor:default">' + esc((d.n || "I")[0]) + '</div>' +
+          '<div class="g"><b style="font-size:19px;font-weight:700">' + esc(d.n) + '</b>' +
+          (subLine ? '<div class="mu" style="font-size:13px">' + esc(subLine) + '</div>' : '') + '</div>' +
+        '</div>' +
+        rw(L("الموبايل", "Mobile"), d.ph) +
+        rw(L("المحافظة", "Governorate"), d.ct) +
+        liBtn +
+      '</div>' +
+      (d.pub.length ? '<div class="cd"><b>' + L("الوثائق العامة", "Public Documents") + '</b>' + d.pub.map(function (it) {
+        return '<div class="rw"><span>' + esc(it[0]) + (it[2] ? ' <span class="mu" style="font-size:11.5px">· ' + esc(it[2]) + '</span>' : '') + '</span><b dir="auto">' + esc(it[1]) + '</b></div>';
+      }).join("") + '</div>' : "");
+    }
+
+    var cvBlock = "";
+    if (d.scope === "cv" || d.scope === "both") {
+      var groups = [
+        [L("التعليم", "Education"), ["edu"]],
+        [L("الخبرات", "Experience"), ["exp"]],
+        [L("المهارات", "Skills"), ["skill"]],
+        [L("المشاريع", "Projects"), ["proj"]],
+        [L("الشهادات والكورسات", "Certificates & Courses"), ["cert", "course"]]
+      ];
+      var secHtml = groups.map(function (g) {
+        var rows = d.cv.filter(function (x) { return g[1].indexOf(x[0]) > -1; });
+        if (!rows.length) return "";
+        return '<h3 style="color:#33449a;border-bottom:2px solid #eee;padding-bottom:4px;margin:18px 0 8px;font-size:16px">' + g[0] + '</h3>' +
+          rows.map(function (r) {
+            return '<div style="margin-bottom:8px"><b>' + esc(r[1]) + '</b>' +
+              (r[3] ? ' <span style="color:#666">— ' + esc(r[3]) + '</span>' : '') +
+              (r[2] ? '<div style="color:#444;font-size:13px">' + esc(r[2]) + '</div>' : '') +
+            '</div>';
+          }).join("");
+      }).join("");
+      cvBlock = '<div class="ar" style="margin:8px 0 10px">' +
+        '<b style="font-size:17px">' + L("السيرة الذاتية (CV)", "Curriculum Vitae (CV)") + '</b>' +
+        '<button class="bt o" type="button" onclick="try{window.print()}catch(e){}">' + mi("print", 18) + " " + L("طباعة / PDF", "Print / PDF") + '</button>' +
+      '</div>' +
+      '<div id="cvp" class="cvp">' +
+        '<div style="border-bottom:3px solid #33449a;padding-bottom:10px">' +
+          '<h2 style="margin:0;font-size:23px;font-weight:700">' + esc(d.n) + '</h2>' +
+          (subLine ? '<div style="color:#555">' + esc(subLine) + '</div>' : '') +
+          (d.ph ? '<div dir="ltr" style="color:#555">' + esc(d.ph) + '</div>' : '') +
+        '</div>' +
+        (secHtml || '<div style="color:#666;margin-top:12px">' + L("لا توجد عناصر سيرة عامة مضافة بعد.", "No public CV items added yet.") + '</div>') +
+      '</div>' +
+      (d.scope === "cv" ? liBtn : "");
+    }
+
+    return '<div class="sx">' + topBar + remBadge + profBlock + cvBlock + '</div>';
+  }
+
   var _R = R;
   R = function () {
+    if (/^#s=/.test(location.hash)) {
+      document.getElementById("app").innerHTML = tempShareView();
+      if (typeof applyLang === "function") applyLang();
+      return;
+    }
     if (hashP()) {
       document.getElementById("app").innerHTML = emView();
       if (typeof applyLang === "function") applyLang();
@@ -430,7 +848,7 @@
     }
     _R();
   };
-  window.addEventListener("hashchange", function () { EM = null; loadEm(); });
+  window.addEventListener("hashchange", function () { EM = null; if (hashP()) loadEm(); else R(); });
 
   /* ---- Inside the App: Emergency & NFC Card Setup Page (emPage) ---- */
   var emSample = false, emLink = "", emEdit = false, emGenerating = false;

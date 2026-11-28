@@ -88,6 +88,8 @@ check("S35 Emergency SOS button sends GPS location + emergency profile and works
 const privSrc = read("idc-private.js");
 check("S36 Private partition supports Duress PIN (decoy vault without decrypting real vault)", /duressHash/.test(privSrc) && /duressMode/.test(privSrc) && /DECOY_ITEMS/.test(privSrc));
 check("S37 Card Bank implements spending limit (linear bar + 80% warn + block), hide balance (10s auto-rehide + biometric), 5 categories breakdown, and <=30d expiry alert", /bk-pg/.test(bankSrc) && /0\.8/.test(bankSrc) && /10000/.test(bankSrc) && /expDays/.test(bankSrc) && /transport/.test(bankSrc) && /bills/.test(bankSrc));
+check("S38 Direct LinkedIn flow normalizes HTTPS profile URLs and opens saved LinkedIn profile directly", /idcOpenLinkedIn/.test(plusSrc) && /idcNormalizeHttpsUrl/.test(plusSrc) && /idcOpenLinkedIn/.test(html));
+check("S39 Hourly Temporary Share (#s=...) supports 4/7/24h + custom hours and CV/Profile/Both scopes", /IDCTempShare/.test(plusSrc) && /IDCTempShare/.test(html) && /IDCTempShare/.test(settingsSrc));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
@@ -273,6 +275,124 @@ let savedBody;
   check("T9a owner accessing their own route (/IDC/1111) is authorized as owner", Boolean(ownRes && ownRes.authorized === true && ownRes.role === "owner"));
   check("T9b changing URL ID to another user's route (/IDC/2222) is blocked by IDOR middleware (403)", Boolean(foreignRes && foreignRes.authorized === false && foreignRes.status === 403 && foreignRes.role === "visitor_idor_blocked"));
   check("T9c blocked IDOR attempt never leaks the current user's vault or grants owner access to route 2222", Boolean(foreignRes && !foreignRes.vault && t.ctx.S.routeId === "1111"));
+}
+
+// T10 & T11: Direct LinkedIn URL flow & Hourly Temporary Share (#s=...) in idc-plus.js
+{
+  const openedUrls = [];
+  const modals = [];
+  const appEl = { innerHTML: "" };
+  const pCtx = {
+    console, TextEncoder, TextDecoder, Uint8Array, Uint32Array, Promise, JSON, Math, Date, Object, Array, String, Number, Boolean, Error, RegExp, parseInt, parseFloat, isNaN, URL, URLSearchParams, encodeURIComponent, decodeURIComponent,
+    atob, btoa, setTimeout: () => 0, clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {}, crypto: globalThis.crypto,
+    navigator: { onLine: true, userAgent: "Mozilla/5.0" },
+    sessionStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    history: { replaceState: () => {} },
+    location: { origin: "https://idc-ui.github.io", pathname: "/IDC/", search: "", hash: "" },
+    open: (u, target, rel) => { openedUrls.push({ u, target, rel }); },
+    document: {
+      getElementById: (id) => (id === "app" ? appEl : null),
+      createElement: () => ({ style: {}, setAttribute: () => {}, querySelector: () => ({ onclick: null }), remove: () => {} }),
+      body: { appendChild: (el) => modals.push(el) },
+      head: { appendChild: () => {} }
+    },
+    addEventListener: () => {},
+    S: {
+      lang: "ar",
+      screen: "home",
+      p: { n: "نور محمد", nid: "29901011234567", bd: "2000-05-14", ph: "01012345678", ct: "القاهرة", role: "emp", linkedin: "", photo: "data:image/webp;base64,AAAA" },
+      items: [
+        { id: "1", mode: "on", level: "public", type: "edu", title: "بكالوريوس حاسبات", value: "2022", issuer: "جامعة القاهرة" },
+        { id: "2", mode: "on", level: "public", type: "exp", title: "مهندس برمجيات", value: "2024 - 2026", issuer: "شركة تقنية" },
+        { id: "3", mode: "on", level: "private", type: "bank", title: "حساب بنكي خاص", value: "EG9900001111", issuer: "CIB" },
+        { id: "4", mode: "on", level: "secret", type: "cert", title: "شهادة سرية", value: "SEC-99", issuer: "Cisco", until: "2099-01-01" }
+      ],
+      em: null
+    },
+    RL: { emp: ["موظف/ـة", "work"], student: ["طالب/ـة", "school"] },
+    esc: (x) => String(x == null ? "" : x).replace(/[&<>"']/g, "_"),
+    mi: (n) => "[" + n + "]",
+    wm: () => '<div class="wm">IDC</div>',
+    fld: (id, l) => '<input id="' + id + '">',
+    pgh: (t) => "<h2>" + t + "</h2>",
+    qr: () => "<svg></svg>",
+    lv: (i) => i.level,
+    v: () => "",
+    tst: () => {},
+    sv: () => {},
+    R: () => { appEl.innerHTML = "home"; },
+    hHome: () => "<div>home</div>",
+    page: () => "<div>page</div>",
+    setup: () => '<div><div class="ar"></div></div>'
+  };
+  pCtx.window = pCtx;
+  vm.createContext(pCtx);
+  try { vm.runInContext(read("idc-plus.js"), pCtx); } catch (e) {}
+
+  const norm = pCtx.idcNormalizeHttpsUrl;
+  check("T10a idcNormalizeHttpsUrl normalizes linkedin.com/in/... to https://", typeof norm === "function" && norm("linkedin.com/in/nour-dev") === "https://linkedin.com/in/nour-dev" && norm("https://www.linkedin.com/in/nour") === "https://www.linkedin.com/in/nour");
+  check("T10b idcNormalizeHttpsUrl blocks javascript:, data:, http:, and blank URLs", typeof norm === "function" && norm("javascript:alert(1)") === "" && norm("data:text/html,x") === "" && norm("http://evil.example") === "" && norm("   ") === "");
+
+  if (typeof pCtx.idcOpenLinkedIn === "function") {
+    pCtx.idcOpenLinkedIn(false); // empty linkedin -> opens prompt modal, no window.open
+    const openedWhenEmpty = openedUrls.length;
+    const modalsWhenEmpty = modals.length;
+    pCtx.S.p.linkedin = "linkedin.com/in/nour-dev";
+    pCtx.idcOpenLinkedIn(false); // saved linkedin -> opens directly in new tab!
+    check("T10c idcOpenLinkedIn prompts when unset and opens saved LinkedIn directly via noopener", openedWhenEmpty === 0 && modalsWhenEmpty === 1 && openedUrls.length === 1 && openedUrls[0].u === "https://linkedin.com/in/nour-dev" && /noopener/.test(openedUrls[0].rel));
+  } else {
+    check("T10c idcOpenLinkedIn prompts when unset and opens saved LinkedIn directly via noopener", false, "idcOpenLinkedIn missing");
+  }
+
+  const ts = pCtx.IDCTempShare;
+  if (ts && typeof ts.buildLink === "function" && typeof ts.parseHash === "function") {
+    const now = 1_700_000_000_000;
+    const cvShare = ts.buildLink({ scope: "cv", hours: 4, nowMs: now });
+    const hashPart = "#" + cvShare.url.split("#")[1];
+    const parsedBefore = ts.parseHash(hashPart, now + 3 * 3600_000);
+    const parsedAfter = ts.parseHash(hashPart, now + 4 * 3600_000 + 1);
+    const rawStr = JSON.stringify(parsedBefore.data || {});
+
+    check("T11a 4-hour CV link includes public CV items and excludes private/secret items, full NID, and base64 photos",
+      cvShare.exp === now + 4 * 3600_000 &&
+      parsedBefore.active === true &&
+      parsedBefore.data.scope === "cv" &&
+      /بكالوريوس حاسبات/.test(rawStr) &&
+      !/EG9900001111/.test(rawStr) &&
+      !/SEC-99/.test(rawStr) &&
+      !/29901011234567/.test(rawStr) &&
+      !/data:image/.test(cvShare.url));
+
+    const prof7 = ts.buildLink({ scope: "profile", hours: 7, nowMs: now });
+    const both24 = ts.buildLink({ scope: "both", hours: 24, nowMs: now });
+    const clamped = ts.buildLink({ scope: "both", hours: 9999, nowMs: now });
+    const p7Data = ts.parseHash("#" + prof7.url.split("#")[1], now + 1000).data;
+    const b24Data = ts.parseHash("#" + both24.url.split("#")[1], now + 1000).data;
+    check("T11b scope isolation (profile vs cv vs both) and 7h/24h/clamped durations work accurately",
+      prof7.exp === now + 7 * 3600_000 &&
+      both24.exp === now + 24 * 3600_000 &&
+      clamped.hours === 168 &&
+      p7Data && p7Data.scope === "profile" && (!p7Data.cv || p7Data.cv.length === 0) &&
+      b24Data && b24Data.scope === "both" && Array.isArray(b24Data.cv) && b24Data.cv.length === 2);
+
+    check("T11c temporary share link expires automatically right after hours elapse", parsedAfter.active === false && parsedAfter.expired === true && parsedAfter.data === null);
+
+    pCtx.location.hash = "#" + cvShare.url.split("#")[1];
+    const origNow = pCtx.Date.now;
+    pCtx.Date.now = () => now + 5 * 3600_000;
+    pCtx.R();
+    pCtx.Date.now = origNow;
+    const corrupted = ts.parseHash("#s=%%%not_valid_base64%%%", now);
+    check("T11d expired/corrupted #s=... link fails closed and renders expiry screen with zero leaked data",
+      corrupted.active === false && corrupted.invalid === true && corrupted.data === null &&
+      /انتهت صلاحية|expired/i.test(appEl.innerHTML) && !/نور محمد/.test(appEl.innerHTML) && !/بكالوريوس/.test(appEl.innerHTML));
+  } else {
+    check("T11a 4-hour CV link includes public CV items and excludes private/secret items, full NID, and base64 photos", false, "IDCTempShare missing");
+    check("T11b scope isolation (profile vs cv vs both) and 7h/24h/clamped durations work accurately", false, "IDCTempShare missing");
+    check("T11c temporary share link expires automatically right after hours elapse", false, "IDCTempShare missing");
+    check("T11d expired/corrupted #s=... link fails closed and renders expiry screen with zero leaked data", false, "IDCTempShare missing");
+  }
 }
 
 /* ---------------------------------------------------------------- summary */

@@ -143,6 +143,11 @@
 
   function syncFromAppState() {
     if (typeof S === "undefined") return;
+    if (st.lists.accts && st.lists.accts[0] && st.lists.accts[0].a === "LinkedIn") {
+      var hasLi = Boolean(S.p && S.p.linkedin && String(S.p.linkedin).trim());
+      st.lists.accts[0].c = hasLi ? 1 : 0;
+      st.lists.accts[0].b = hasLi ? "Connected · Tap to open/edit|مربوط · اضغط للفتح أو التعديل" : "Not connected|مش مربوط";
+    }
     if (S.em && S.em.c1 && S.em.c2) {
       var exists = st.lists.contacts.some(function (c) { return c.b === S.em.c2; });
       if (!exists) {
@@ -432,6 +437,10 @@
       share: {
         t: "Profile sharing permissions|صلاحيات مشاركة الملف",
         b: [
+          P_("Create an external link for your CV, public profile, or both that expires automatically after 4, 7, 24, or custom hours.|أنشئ رابطًا خارجيًا للسيرة الذاتية أو البروفايل العام أو الاثنين معًا ينتهي تلقائيًا بعد 4 أو 7 أو 24 ساعة أو عدد ساعات مخصص."),
+          BT("Create temporary link (4 / 7 / 24 hours)|إنشاء رابط مؤقت (4 / 7 / 24 ساعة)", "primary", function () {
+            if (window.IDCTempShare) window.IDCTempShare.openModal("both");
+          }),
           H("Who can view my profile|مين يقدر يشوف ملفي"),
           { k: "choice", key: "share", o: ["Everyone|الكل", "Verified members only|الأعضاء الموثّقين بس", "People I share with|اللي بشاركهم بس", "Only me|أنا بس"] },
           H("Sharing methods|طرق المشاركة"),
@@ -895,10 +904,24 @@
           r.insertAdjacentHTML("beforeend", '<span class="st">' + B("This device|الجهاز ده") + "</span>");
         }
         if (b.mode === "toggle") {
+          if (it.a === "LinkedIn" && it.c) {
+            var openLi = document.createElement("button");
+            openLi.className = "mini";
+            openLi.style.marginInlineEnd = "10px";
+            openLi.textContent = B("Open|فتح ↗");
+            openLi.onclick = function () {
+              if (window.idcOpenLinkedIn) window.idcOpenLinkedIn(false);
+            };
+            r.appendChild(openLi);
+          }
           var x2 = document.createElement("button");
-          x2.className = "mini" + (it.c ? " d" : "");
-          x2.textContent = B(it.c ? "Disconnect|فصل" : "Connect|ربط");
+          x2.className = "mini" + (it.c && it.a !== "LinkedIn" ? " d" : "");
+          x2.textContent = it.a === "LinkedIn" ? B(it.c ? "Edit|تعديل" : "Add link|ربط الرابط") : B(it.c ? "Disconnect|فصل" : "Connect|ربط");
           x2.onclick = function () {
+            if (it.a === "LinkedIn" && window.idcOpenLinkedIn) {
+              window.idcOpenLinkedIn(true);
+              return;
+            }
             it.c = !it.c;
             it.b = it.c ? "Connected|مربوط" : "Not connected|مش مربوط";
             render();

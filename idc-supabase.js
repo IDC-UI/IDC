@@ -167,6 +167,7 @@
       items: window.IDCPrivate ? window.IDCPrivate.publicItems(S.items) : S.items,
       pv: S.pv || null,
       bk: S.bk || null,
+      tempShare: S.tempShare || null,
       sec: S.sec,
       log: S.log,
       em: S.em || null,
@@ -437,6 +438,7 @@
     S.otab = vault.otab || "data";
     S.pv = vault.pv || null;
     S.bk = vault.bk || null;
+    S.tempShare = vault.tempShare || null;
     if (window.IDCPrivate) window.IDCPrivate.reset();
     S.pin = null;
     S.vpw = null;
@@ -704,6 +706,7 @@
     S.em = null;
     S.pv = null;
     S.bk = null;
+    S.tempShare = null;
     S.pOwner = null;
     S.pin = null;
     S.vpw = null;
@@ -1131,6 +1134,7 @@
       S.items = [];
       S.pv = null;
       S.bk = null;
+      S.tempShare = null;
       S.em = null;
       un = false;
       pk = false;
@@ -1149,7 +1153,7 @@
 
   var renderApp = window.R;
   window.R = function () {
-    if (client && currentUser && !vaultKey && !S.preview) {
+    if (client && currentUser && !vaultKey && !S.preview && !/^#(e|s)=/.test(location.hash)) {
       document.getElementById("app").innerHTML = lockMarkup();
       return;
     }
