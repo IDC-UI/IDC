@@ -496,6 +496,24 @@ let savedBody;
     bkApi.clearAllCards(true);
     check("T13d individual card removal and clearAllCards wipe cards cleanly without errors",
       lenAfterOneRemoved === 2 && bCtx.S.bk.cards.length === 0 && bCtx.S.bk.sel === 0);
+
+    // Luxury tiers: Platinum, Titanium, Infinite
+    bCtx.pg = { k: "bank-add" };
+    Object.assign(bForm, { bkProvider: "bm", bkType: "1", bkTier: "platinum", bkHolder: "MARIA IBRAHIM", bkNum: "4111 5555 6666 1001", bkExp: "10/29", bkOpen: "15000" });
+    bkApi.saveNewCard();
+    Object.assign(bForm, { bkProvider: "bm", bkType: "3", bkTier: "titanium", bkHolder: "MARIA IBRAHIM", bkNum: "5200 5555 6666 1002", bkExp: "11/29", bkOpen: "20000" });
+    bkApi.saveNewCard();
+    Object.assign(bForm, { bkProvider: "bm", bkType: "1", bkTier: "infinite", bkHolder: "MARIA IBRAHIM", bkNum: "4111 5555 6666 1003", bkExp: "12/30", bkOpen: "50000" });
+    bkApi.saveNewCard();
+    bCtx.pg = { k: "bank" };
+    const luxHtml = bCtx.page();
+    check("T13e luxury tiers (Platinum brushed band, Titanium S-wave chrome, Infinite geometric line-art) render distinct skins and badges",
+      /bk-skin-platinum/.test(luxHtml) &&
+      /bk-skin-titanium/.test(luxHtml) &&
+      /bk-skin-infinite/.test(luxHtml) &&
+      /Platinum/.test(luxHtml) &&
+      /titanium/i.test(luxHtml) &&
+      /Infinite/.test(luxHtml));
   } else {
     check("T13b adding NBE, Banque Misr, and Telda cards renders bank SVG logos + Meeza/VISA/Mastercard badges and keeps only last 4 digits", false, "getProviders missing");
     check("T13c IBAN and InstaPay address can be updated and rendered cleanly", false, "saveIbanValues missing");

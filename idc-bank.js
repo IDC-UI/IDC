@@ -30,6 +30,11 @@
     ".bk-skin-nbe-credit{background:repeating-linear-gradient(152deg,rgba(255,255,255,.03) 0 2px,transparent 2px 7px),linear-gradient(135deg,#072B1C 0%,#0D5235 58%,#136B44 100%)}",
     ".bk-skin-bm-navy{background:linear-gradient(160deg,#0C1C4D 0%,#132B6E 62%,#1B3B88 100%)}",
     ".bk-skin-bm-gold{background:linear-gradient(135deg,#D8AE52 0%,#B9892B 45%,#E4C26B 78%,#A97A20 100%)}",
+    ".bk-skin-platinum{background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px),linear-gradient(180deg,#15171C 0%,#282B33 48%,#111317 100%)}",
+    ".bk-skin-titanium{background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 2px,rgba(0,0,0,.16) 2px 5px),linear-gradient(180deg,#686F7C 0%,#393E48 100%)}",
+    ".bk-skin-titanium .bk-r1{color:#141820}",
+    ".bk-skin-titanium .bk-tier{background:rgba(0,0,0,.1);color:#141820}",
+    ".bk-skin-infinite{background:linear-gradient(145deg,#090A0D 0%,#12141B 60%,#08090C 100%)}",
     ".bk-skin-cib{background:linear-gradient(135deg,#09245A 0%,#124296 65%,#1A58BD 100%)}",
     ".bk-skin-qnb{background:linear-gradient(135deg,#0B1B42 0%,#173369 68%,#6B1530 100%)}",
     ".bk-skin-bdc{background:linear-gradient(135deg,#56132B 0%,#842740 64%,#B04A3A 100%)}",
@@ -111,6 +116,14 @@
     { net: "Mastercard", tier: "Credit / Debit", tierEn: "Mastercard", ar: "ماستركارد (Mastercard)", en: "Mastercard" }
   ];
 
+  var CARD_TIERS = [
+    { id: "standard", ar: "التصميم الأساسي للبنك (Classic / Standard)", en: "Bank Signature (Classic / Standard)", badge: "" },
+    { id: "gold", ar: "ذهبي مضلّع (Gold)", en: "Gold Edition", badge: "Gold" },
+    { id: "titanium", ar: "تيتانيوم معدني متموّج (Titanium)", en: "Titanium Metallic", badge: "titanium" },
+    { id: "platinum", ar: "بلاتينيوم أسود منقوش (Platinum)", en: "Platinum Brushed Metal", badge: "Platinum" },
+    { id: "infinite", ar: "إنفينيت أسود هندسي فاخر (Infinite)", en: "Infinite Luxury Black", badge: "Infinite" }
+  ];
+
   /* 16 Authentic Egyptian Banks & Payment Providers */
   var PROVIDERS = [
     { id: "nbe", kind: "bank", ar: "البنك الأهلي المصري", en: "National Bank of Egypt", sub: "NATIONAL BANK OF EGYPT", dot: "#0D563A" },
@@ -155,20 +168,31 @@
     return PROVIDERS[15];
   }
 
-  function resolveSkin(provId, net) {
-    if (provId === "nbe") return { cls: net === "meeza" ? "bk-skin-nbe-meeza" : "bk-skin-nbe-credit", darkInk: false };
-    if (provId === "bm") return net === "VISA" ? { cls: "bk-skin-bm-gold", darkInk: true } : { cls: "bk-skin-bm-navy", darkInk: false };
-    if (provId === "fawry") return { cls: "bk-skin-fawry", darkInk: true };
+  function resolveSkin(provId, net, tierKey) {
+    if (tierKey === "platinum") return { cls: "bk-skin-platinum", darkInk: false, topDark: false, silverChip: true };
+    if (tierKey === "titanium") return { cls: "bk-skin-titanium", darkInk: false, topDark: true, silverChip: false };
+    if (tierKey === "infinite") return { cls: "bk-skin-infinite", darkInk: false, topDark: false, silverChip: false };
+    if (tierKey === "gold") return { cls: "bk-skin-bm-gold", darkInk: true, topDark: true, silverChip: false };
+    if (provId === "nbe") return { cls: net === "meeza" ? "bk-skin-nbe-meeza" : "bk-skin-nbe-credit", darkInk: false, topDark: false, silverChip: false };
+    if (provId === "bm") return net === "VISA" ? { cls: "bk-skin-bm-gold", darkInk: true, topDark: true, silverChip: false } : { cls: "bk-skin-bm-navy", darkInk: false, topDark: false, silverChip: false };
+    if (provId === "fawry") return { cls: "bk-skin-fawry", darkInk: true, topDark: true, silverChip: false };
     var map = {
       cib: "bk-skin-cib", qnb: "bk-skin-qnb", bdc: "bk-skin-bdc", alex: "bk-skin-alex",
       adib: "bk-skin-adib", faisal: "bk-skin-faisal", hsbc: "bk-skin-hsbc", post: "bk-skin-post",
       telda: "bk-skin-telda", klivvr: "bk-skin-klivvr", nexta: "bk-skin-nexta", instapay: "bk-skin-instapay"
     };
-    return { cls: map[provId] || "bk-skin-other", darkInk: false };
+    return { cls: map[provId] || "bk-skin-other", darkInk: false, topDark: false, silverChip: false };
   }
 
   /* Crisp Inline SVG Hardware & Logos */
-  function chipSvg(darkInk) {
+  function chipSvg(darkInk, silverChip) {
+    if (silverChip) {
+      return '<svg width="42" height="30" viewBox="0 0 42 30" aria-hidden="true">' +
+        '<defs><linearGradient id="bkChipS" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F3F5F8"/><stop offset="50%" stop-color="#BFC5CE"/><stop offset="100%" stop-color="#8A919C"/></linearGradient></defs>' +
+        '<rect x=".5" y=".5" width="41" height="29" rx="5.5" fill="url(#bkChipS)" stroke="#4B515B" stroke-width=".9"/>' +
+        '<path d="M14 1v28M28 1v28M1 10h13M28 10h13M1 20h13M28 20h13M14 15h14" stroke="#4B515B" stroke-width=".85" fill="none" opacity=".75"/>' +
+        '</svg>';
+    }
     var stroke = darkInk ? "#5C4510" : "#6E561B";
     return '<svg width="42" height="30" viewBox="0 0 42 30" aria-hidden="true">' +
       '<defs><linearGradient id="bkChipG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F2DFA0"/><stop offset="50%" stop-color="#CFA954"/><stop offset="100%" stop-color="#9E7929"/></linearGradient></defs>' +
@@ -184,7 +208,7 @@
       '</svg>';
   }
 
-  function networkBadgeSvg(net, isGold) {
+  function networkBadgeSvg(net, subBadge) {
     if (net === "meeza") {
       return '<svg width="68" height="32" viewBox="0 0 96 44" aria-label="Meeza">' +
         '<rect width="96" height="44" rx="8" fill="#FFFFFF"/>' +
@@ -195,18 +219,28 @@
         '</svg>';
     }
     if (net === "Mastercard") {
-      return '<svg width="54" height="34" viewBox="0 0 64 40" aria-label="Mastercard">' +
-        '<circle cx="24" cy="20" r="14" fill="#EB001B"/>' +
-        '<circle cx="40" cy="20" r="14" fill="#F79E1B" fill-opacity=".92"/>' +
-        '</svg>';
+      return '<div style="text-align:right;line-height:1">' +
+        (subBadge === "titanium" ? '<div style="font-size:10px;font-weight:700;margin-bottom:3px;letter-spacing:.03em;color:#11151C">titanium</div>' : '') +
+        '<svg width="54" height="34" viewBox="0 0 64 40" aria-label="Mastercard">' +
+          '<circle cx="24" cy="20" r="14" fill="#EB001B"/>' +
+          '<circle cx="40" cy="20" r="14" fill="#F79E1B" fill-opacity=".92"/>' +
+        '</svg>' +
+        (subBadge && subBadge !== "titanium" ? '<div style="font-size:9.5px;font-weight:700;margin-top:2px;opacity:.92">' + esc(subBadge) + '</div>' : '') +
+      '</div>';
     }
-    // VISA
+    // VISA (with Infinite dark-silver luxury treatment or crisp white badge + Gold/Platinum subtitle)
+    if (subBadge === "Infinite") {
+      return '<div style="text-align:right;line-height:1">' +
+        '<div style="font-family:Arial,sans-serif;font-style:italic;font-weight:900;font-size:21px;letter-spacing:1px;color:#E5E7EB">VISA</div>' +
+        '<div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:#CBD5E1;margin-top:2px">Infinite</div>' +
+      '</div>';
+    }
     return '<div style="text-align:right;line-height:1">' +
       '<svg width="64" height="26" viewBox="0 0 84 32" aria-label="VISA">' +
         '<rect width="84" height="32" rx="6" fill="#FFFFFF"/>' +
         '<text x="42" y="23" text-anchor="middle" font-family="Arial,sans-serif" font-style="italic" font-weight="900" font-size="21" letter-spacing="1" fill="#1434CB">VISA</text>' +
       '</svg>' +
-      (isGold ? '<div style="font-size:9px;font-weight:700;margin-top:2px;opacity:.9">Gold</div>' : '') +
+      (subBadge ? '<div style="font-size:9.5px;font-weight:700;margin-top:3px;opacity:.94">' + esc(subBadge) + '</div>' : '') +
       '</div>';
   }
 
@@ -281,7 +315,48 @@
       '</svg>';
   }
 
-  function cardWatermarkSvg(provId, net) {
+  function cardWatermarkSvg(provId, net, tierKey) {
+    if (tierKey === "platinum") {
+      // Recessed engraved Pharaonic band across middle (inspired by Banque Misr Visa Platinum)
+      return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
+        '<rect x="0" y="68" width="340" height="50" fill="rgba(255,255,255,.07)" stroke="rgba(0,0,0,.55)" stroke-width="1.5"/>' +
+        '<g opacity=".26" stroke="#D1D5DB" stroke-width="1.2" fill="none">' +
+          '<polygon points="155,115 182,74 209,115"/>' +
+          '<circle cx="238" cy="94" r="12"/><path d="M226 112c6-8 18-8 24 0"/>' +
+          '<path d="M268 74v40M280 74v40M294 84c8-6 18 6 26 0M294 100c8-6 18 6 26 0"/>' +
+        '</g></svg>';
+    }
+    if (tierKey === "titanium") {
+      // Two-tone chrome silver top with sweeping metallic S-wave & calligraphic T (inspired by Banque Misr Titanium)
+      return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
+        '<defs><linearGradient id="bkTitTop" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F4F6FA"/><stop offset="55%" stop-color="#D7DCE6"/><stop offset="100%" stop-color="#B8C0CE"/></linearGradient></defs>' +
+        '<path d="M0,0 L340,0 L340,78 C255,62 175,142 0,128 Z" fill="url(#bkTitTop)"/>' +
+        '<path d="M0,128 C175,142 255,62 340,78" fill="none" stroke="#FFFFFF" stroke-width="3.2" opacity=".9"/>' +
+        '<path d="M0,133 C175,147 255,67 340,83" fill="none" stroke="#1F242D" stroke-width="2" opacity=".45"/>' +
+        '<text x="292" y="46" font-family="Georgia,serif" font-style="italic" font-size="34" fill="#2B303A" opacity=".78">T</text>' +
+      '</svg>';
+    }
+    if (tierKey === "infinite") {
+      // Matte black with crisp architectural silver Pharaonic geometry, Nile zig-zag waves & Eye lens (inspired by Visa Infinite)
+      return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
+        '<g stroke="#CBD5E1" stroke-width="1.05" fill="none" opacity=".44">' +
+          '<line x1="88" y1="0" x2="88" y2="215"/><line x1="142" y1="0" x2="142" y2="215"/><line x1="235" y1="0" x2="235" y2="215"/>' +
+          '<line x1="60" y1="90" x2="310" y2="90"/><line x1="88" y1="0" x2="265" y2="175"/><line x1="142" y1="90" x2="255" y2="0"/>' +
+          '<circle cx="96" cy="58" r="22"/><circle cx="228" cy="42" r="16"/>' +
+          '<path d="M142,90 A78,78 0 0,0 288,136"/><polygon points="148,148 188,108 188,168"/>' +
+          '<path d="M118,28 l6,5 l-6,5 l6,5 l-6,5 l6,5 l-6,5 M127,28 l6,5 l-6,5 l6,5 l-6,5 l6,5 l-6,5" stroke-width="1.5"/>' +
+          '<path d="M148,10 C156,22 156,34 148,46 C140,34 140,22 148,10 Z"/><circle cx="148" cy="28" r="3" fill="#CBD5E1"/>' +
+        '</g></svg>';
+    }
+    if (tierKey === "gold" || (provId === "bm" && net === "VISA")) {
+      return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
+        '<g opacity=".22">' +
+          '<polygon points="0,0 140,0 70,95" fill="#FFFbeb"/>' +
+          '<polygon points="140,0 290,0 210,110" fill="#78350F"/>' +
+          '<polygon points="70,95 210,110 130,215" fill="#FEF3C7"/>' +
+          '<polygon points="210,110 340,40 340,215" fill="#92400E"/>' +
+        '</g></svg>';
+    }
     if (provId === "nbe") {
       return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
         '<g opacity=".18" transform="translate(112,32)">' +
@@ -304,16 +379,6 @@
           '<path d="M268 215v-70a28 28 0 0 1 56 0v70z" fill="#10B981"/>' +
         '</g></svg>';
     }
-    if (provId === "bm" && net === "VISA") {
-      // Faceted low-poly gold triangles inspired by Banque Misr Visa Gold
-      return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
-        '<g opacity=".22">' +
-          '<polygon points="0,0 140,0 70,95" fill="#FFFbeb"/>' +
-          '<polygon points="140,0 290,0 210,110" fill="#78350F"/>' +
-          '<polygon points="70,95 210,110 130,215" fill="#FEF3C7"/>' +
-          '<polygon points="210,110 340,40 340,215" fill="#92400E"/>' +
-        '</g></svg>';
-    }
     return '<svg viewBox="0 0 340 215" width="100%" height="100%" preserveAspectRatio="none">' +
       '<circle cx="295" cy="35" r="95" fill="rgba(255,255,255,.06)"/>' +
       '<circle cx="45" cy="195" r="85" fill="rgba(255,255,255,.04)"/>' +
@@ -323,29 +388,31 @@
   function renderSingleCardVisual(cardObj, idx, isSelected, interactive) {
     var prov = findProvider(cardObj.bankId || cardObj.bank);
     var net = cardObj.net || "VISA";
-    var skin = resolveSkin(prov.id, net);
+    var tierKey = cardObj.tierKey || "standard";
+    var skin = resolveSkin(prov.id, net, tierKey);
     var bankTitle = prov.id === "other" ? (cardObj.bank || L("بطاقة بنكية", "Bank Card")) : L(prov.ar, prov.en);
     var bankSub = prov.id === "other" ? "BANK CARD" : prov.sub;
     var activeBorder = (interactive && isSelected) ? ' style="outline:2.5px solid var(--bl);outline-offset:3px;border-radius:20px"' : "";
     var clickAttr = interactive
       ? ' role="button" tabindex="0" aria-label="' + L("قلب الكارد", "Flip card") + '" onclick="if(S.bk.sel!==' + idx + '){S.bk.sel=' + idx + ';R();}else{this.classList.toggle(\'flip\')}"'
       : ' style="margin:0 auto"';
-    var isGold = prov.id === "bm" && net === "VISA";
+    var tierMeta = CARD_TIERS.filter(function (t) { return t.id === tierKey; })[0];
+    var subBadge = (tierMeta && tierMeta.badge) || ((prov.id === "bm" && net === "VISA" && tierKey === "standard") ? "Gold" : "");
 
     return '<div class="bk-fc"' + activeBorder + clickAttr + '>' +
       '<div class="bk-fi">' +
         '<div class="bk-face ' + skin.cls + (skin.darkInk ? " bk-ink-dark" : "") + '">' +
-          '<div class="bk-art">' + cardWatermarkSvg(prov.id, net) + '</div>' +
+          '<div class="bk-art">' + cardWatermarkSvg(prov.id, net, tierKey) + '</div>' +
           '<div class="bk-fg">' +
             '<div class="bk-r1">' +
-              '<div class="bk-brand">' + bankLogoSvg(prov.id, skin.darkInk) +
+              '<div class="bk-brand">' + bankLogoSvg(prov.id, skin.darkInk || skin.topDark) +
                 '<div class="bk-btxt"><b>' + esc(bankTitle) + '</b><small>' + esc(bankSub) + '</small></div>' +
               '</div>' +
-              '<span class="bk-tier">' + esc(cardObj.tier || net) + '</span>' +
+              '<span class="bk-tier">' + esc(subBadge || cardObj.tier || net) + '</span>' +
             '</div>' +
             '<div class="bk-mid">' +
-              '<div class="bk-chip-wrap"><span style="font-size:10px;opacity:.7">◂</span>' + chipSvg(skin.darkInk) + '</div>' +
-              nfcSvg(skin.darkInk) +
+              '<div class="bk-chip-wrap"><span style="font-size:10px;opacity:.7">◂</span>' + chipSvg(skin.darkInk || skin.topDark, skin.silverChip) + '</div>' +
+              nfcSvg(skin.darkInk || skin.topDark) +
             '</div>' +
             '<div class="bk-cn">•••• &nbsp;•••• &nbsp;•••• &nbsp;' + esc(cardObj.last4 || "0000") + '</div>' +
             '<div class="bk-r3">' +
@@ -353,7 +420,7 @@
                 '<div class="bk-exp"><small>VALID<br>THRU</small><span>' + esc(cardObj.exp || "MM/YY") + '</span></div>' +
                 '<div class="bk-holder">' + esc(cardObj.holder || "CARDHOLDER NAME") + '</div>' +
               '</div>' +
-              '<div class="bk-net-box">' + networkBadgeSvg(net, isGold) + '</div>' +
+              '<div class="bk-net-box">' + networkBadgeSvg(net, subBadge) + '</div>' +
             '</div>' +
           '</div>' +
           (cardObj.frozen ? '<div class="bk-frz">' + L("متجمّد", "FROZEN") + "</div>" : "") +
@@ -361,7 +428,7 @@
         '<div class="bk-face bk ' + skin.cls + '">' +
           '<div class="bk-stripe"></div>' +
           '<div class="bk-sig"><span>' + L("التوقيع المعتمد", "Authorized signature") + '</span><i>•••</i></div>' +
-          '<div style="font-size:11px;opacity:.85;margin:12px 16px 0;color:#fff">' + esc(bankTitle) + ' · ' + esc(net) + '<br>' + L("آخر 4 أرقام فقط محفوظة ومشفّرة داخل محفظة IDC", "Only last 4 digits stored & encrypted in IDC Vault") + '</div>' +
+          '<div style="font-size:11px;opacity:.85;margin:12px 16px 0;color:#fff">' + esc(bankTitle) + ' · ' + esc(net) + (subBadge ? ' ' + esc(subBadge) : '') + '<br>' + L("آخر 4 أرقام فقط محفوظة ومشفّرة داخل محفظة IDC", "Only last 4 digits stored & encrypted in IDC Vault") + '</div>' +
         '</div>' +
       '</div></div>';
   }
@@ -371,6 +438,7 @@
   var revTick = null;
   var addDraftProvider = "nbe";
   var addDraftType = 0;
+  var addDraftTier = "standard";
 
   function L(ar, en) { return typeof S !== "undefined" && S.lang === "en" ? en : ar; }
   function catLabel(k) { var c = CATS[k] || CATS.other; return L(c[0], c[1]); }
@@ -637,6 +705,7 @@
       bank: prov.id === "other" ? L("اسم البنك", "BANK NAME") : prov.ar,
       net: ct.net,
       tier: S.lang === "en" ? ct.tierEn : ct.tier,
+      tierKey: addDraftTier,
       holder: holderDefault,
       last4: "0000",
       exp: "08/29"
@@ -658,6 +727,10 @@
       return '<option value="' + i + '"' + (i === addDraftType ? " selected" : "") + '>' + (S.lang === "en" ? t.en : t.ar) + "</option>";
     }).join("");
 
+    var tierOpts = CARD_TIERS.map(function (tr) {
+      return '<option value="' + tr.id + '"' + (tr.id === addDraftTier ? " selected" : "") + '>' + (S.lang === "en" ? tr.en : tr.ar) + "</option>";
+    }).join("");
+
     return '<div class="idc-bk">' + header +
       '<div style="margin:4px 0 14px;display:flex;justify-content:center">' + previewCard + '</div>' +
       '<div class="nt" style="margin:0 0 12px">' + L("يتم الاحتفاظ بآخر 4 أرقام فقط لعرض شكل الكارد، ولا يتم حفظ الرقم الكامل أو رمز CVV أبدًا.", "Only the last 4 digits are kept to display your card. Full card number and CVV are never stored.") + "</div>" +
@@ -668,6 +741,8 @@
         (prov.id === "other" ? fld("bkBank", L("اسم البنك أو شركة الدفع", "Custom Bank / Provider Name"), { v: "" }) : "") +
         '<div class="mu" style="font-size:12px;margin-top:12px">' + L("شبكة ونوع الكارد", "Card network & type") + '</div>' +
         '<select id="bkType" style="margin-top:4px" onchange="window.IDCBank.setDraftType(this.value)">' + typeOpts + "</select>" +
+        '<div class="mu" style="font-size:12px;margin-top:12px">' + L("فئة وتصميم الكارد (Classic / Gold / Titanium / Platinum / Infinite)", "Card tier & finish (Classic / Gold / Titanium / Platinum / Infinite)") + '</div>' +
+        '<select id="bkTier" style="margin-top:4px" onchange="window.IDCBank.setDraftTier(this.value)">' + tierOpts + "</select>" +
         fld("bkHolder", L("الاسم المطبوع على الكارد", "Cardholder name"), { v: holderDefault, d: "ltr" }) +
         fld("bkNum", L("رقم الكارد (16 رقمًا — يُحفظ آخر 4 فقط)", "Card number (16 digits — only last 4 kept)"), { d: "ltr", m: 19 }) +
         fld("bkExp", L("تاريخ الانتهاء (MM/YY)", "Expiry (MM/YY)"), { d: "ltr", m: 5 }) +
@@ -691,6 +766,10 @@
     },
     setDraftType: function (idx) {
       addDraftType = Number(idx) || 0;
+      R();
+    },
+    setDraftTier: function (tierId) {
+      addDraftTier = tierId || "standard";
       R();
     },
     copyIban: function () {
@@ -863,9 +942,12 @@
         if (er) er.textContent = L("أدخل تاريخ الانتهاء بصيغة MM/YY.", "Use MM/YY expiry format.");
         return;
       }
-      var skin = resolveSkin(prov.id, ct.net);
+      var tierVal = v("bkTier") || addDraftTier || "standard";
+      var validTier = CARD_TIERS.some(function (t) { return t.id === tierVal; }) ? tierVal : "standard";
+      var skin = resolveSkin(prov.id, ct.net, validTier);
       bk.cards.push({
         bankId: prov.id,
+        tierKey: validTier,
         cls: skin.cls,
         net: ct.net,
         tier: ct.tier,
