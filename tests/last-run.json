@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-28T13:15:39.784Z",
-  "passed": 86,
-  "total": 86,
+  "at": "2026-11-28T13:59:04.830Z",
+  "passed": 87,
+  "total": 87,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -430,6 +430,11 @@
     },
     {
       "name": "T14d unlocked biometric user can change password without old password, and OTP reset supports confirmed fresh-vault fallback",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T14e clicking Reset Password email link (PASSWORD_RECOVERY) opens f3 password form instead of getting stuck on Lock Screen",
       "ok": true,
       "detail": ""
     }

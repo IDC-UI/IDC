@@ -594,6 +594,14 @@ let savedBody;
     await tick();
     check("T14d unlocked biometric user can change password without old password, and OTP reset supports confirmed fresh-vault fallback",
       changeOk === true && freshRec.calls.updateUser === 1 && freshRec.ctx.S.screen === "home");
+
+    // T14e: Returning from Supabase Reset Password email link (INITIAL_SESSION + PASSWORD_RECOVERY) opens f3 instead of Lock Screen
+    const linkRec = boot({ session: { user: USER } });
+    await tick(30);
+    linkRec.handlers.forEach((cb) => cb("PASSWORD_RECOVERY", { user: USER }));
+    await tick(20);
+    check("T14e clicking Reset Password email link (PASSWORD_RECOVERY) opens f3 password form instead of getting stuck on Lock Screen",
+      !/المحفظة مقفولة/.test(linkRec.app.innerHTML) && linkRec.ctx.au.m === "f3" && linkRec.ctx.S.screen === "auth");
   } else {
     check("T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function", false, "doVerifyResetOtp or recKey missing");
     check("T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss", false, "doVerifyResetOtp missing");

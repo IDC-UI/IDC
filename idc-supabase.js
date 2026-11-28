@@ -1365,16 +1365,24 @@
     }
     if (event === "PASSWORD_RECOVERY") {
       recoveryPending = true;
-      au = { m: "f3", d: {} };
+      S.screen = "auth";
+      au = { m: "f3", d: { em: (session && session.user && session.user.email) || "" } };
       land = false;
       err = "";
       R();
     }
   });
 
+  if (/[#&?]type=recovery\b/.test(location.hash + location.search)) {
+    recoveryPending = true;
+    S.screen = "auth";
+    au = { m: "f3", d: {} };
+    land = false;
+  }
+
   var renderApp = window.R;
   window.R = function () {
-    if (client && currentUser && !vaultKey && !S.preview && !/^#(e|s)=/.test(location.hash)) {
+    if (client && currentUser && !vaultKey && !S.preview && !recoveryPending && !/^#(e|s)=/.test(location.hash)) {
       document.getElementById("app").innerHTML = lockMarkup();
       if (typeof window.applyLang === "function") window.applyLang();
       return;
