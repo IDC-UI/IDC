@@ -167,6 +167,7 @@
       items: window.IDCPrivate ? window.IDCPrivate.publicItems(S.items) : S.items,
       pv: S.pv || null,
       bk: S.bk || null,
+      rk: S.rk || null,
       tempShare: S.tempShare || null,
       sec: S.sec,
       log: S.log,
@@ -176,6 +177,73 @@
       otab: S.otab || "data"
     };
   }
+
+  /* ---- Recovery Key & Binary Base64URL Vault Envelope ("IDCR") ---- */
+  var RK_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function generateRecoveryCode() {
+    var rnd = crypto.getRandomValues(new Uint8Array(16));
+    var out = [];
+    for (var i = 0; i < 16; i++) out.push(RK_ALPHA[rnd[i] % RK_ALPHA.length]);
+    return "IDC-" + out.slice(0, 4).join("") + "-" + out.slice(4, 8).join("") + "-" + out.slice(8, 12).join("") + "-" + out.slice(12, 16).join("");
+  }
+  function normalizeRecoveryCode(raw) {
+    var clean = String(raw || "").toUpperCase().replace(/[^A-Z2-9]/g, "");
+    if (clean.indexOf("IDC") === 0 && clean.length === 19) clean = clean.slice(3);
+    return clean.length === 16 ? clean : "";
+  }
+  async function packVaultCiphertext(innerCtB64, vkBytes, rkFormatted) {
+    var normRk = normalizeRecoveryCode(rkFormatted);
+    if (!normRk) return innerCtB64;
+    var rkSalt = crypto.getRandomValues(new Uint8Array(16));
+    var rkIv = crypto.getRandomValues(new Uint8Array(12));
+    var rkDerived = await window.IDCrypto.fromPass(normRk, rkSalt);
+    var rkCryptoKey = await window.IDCrypto._k(rkDerived);
+    var wrappedVk = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: rkIv }, rkCryptoKey, vkBytes));
+    var innerBytes = fromBase64Url(innerCtB64);
+    var env = new Uint8Array(4 + 16 + 12 + 48 + innerBytes.length);
+    env.set([73, 68, 67, 82], 0); // "IDCR"
+    env.set(rkSalt, 4);
+    env.set(rkIv, 20);
+    env.set(wrappedVk, 32);
+    env.set(innerBytes, 80);
+    return base64Url(env);
+  }
+  async function decryptVaultCiphertext(ctStr, vkBytes) {
+    var raw = fromBase64Url(ctStr);
+    if (raw.length > 92 && raw[0] === 73 && raw[1] === 68 && raw[2] === 67 && raw[3] === 82) {
+      return window.IDCrypto.dec(base64Url(raw.slice(80)), vkBytes);
+    }
+    return window.IDCrypto.dec(ctStr, vkBytes);
+  }
+  async function unwrapVaultWithRecoveryKey(ctStr, rkInput) {
+    var normRk = normalizeRecoveryCode(rkInput);
+    if (!normRk) throw new Error("invalid_rk");
+    var raw = fromBase64Url(ctStr);
+    if (!(raw.length > 92 && raw[0] === 73 && raw[1] === 68 && raw[2] === 67 && raw[3] === 82)) {
+      throw new Error("no_rk_envelope");
+    }
+    var rkSalt = raw.slice(4, 20);
+    var rkIv = raw.slice(20, 32);
+    var wrappedVk = raw.slice(32, 80);
+    var innerBytes = raw.slice(80);
+    var rkDerived = await window.IDCrypto.fromPass(normRk, rkSalt);
+    var rkCryptoKey = await window.IDCrypto._k(rkDerived);
+    var oldVk = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: rkIv }, rkCryptoKey, wrappedVk));
+    var vault = await window.IDCrypto.dec(base64Url(innerBytes), oldVk);
+    if (!isSafeVault(vault)) throw new Error("invalid_vault");
+    return vault;
+  }
+  window.idcGetRecoveryKey = function () {
+    if (!currentUser || !vaultKey) return "";
+    if (!S.rk || !normalizeRecoveryCode(S.rk)) S.rk = generateRecoveryCode();
+    return S.rk;
+  };
+  window.idcRegenerateRecoveryKey = async function () {
+    if (!currentUser || !vaultKey) return "";
+    S.rk = generateRecoveryCode();
+    try { await persistVault(); } catch (e) {}
+    return S.rk;
+  };
 
   var PUBLIC_EM_KEY = "idc_public_em_v1";
   var outerLockTab = "unlock";
@@ -293,11 +361,13 @@
 
     saveQueue = saveQueue.catch(function () {}).then(async function () {
       if (!vaultKey || !currentUser) return;
+      if (!S.rk || !normalizeRecoveryCode(S.rk)) S.rk = generateRecoveryCode();
       if (window.IDCPrivate) await window.IDCPrivate.seal();
       var snapshot = vaultSnapshot();
       if (!isSafeVault(snapshot)) throw new Error("Invalid vault data");
       if (JSON.stringify(snapshot).length > 5900000) throw new Error("Vault data is too large");
-      var ciphertext = await window.IDCrypto.enc(snapshot, vaultKey);
+      var innerCiphertext = await window.IDCrypto.enc(snapshot, vaultKey);
+      var ciphertext = await packVaultCiphertext(innerCiphertext, vaultKey, S.rk);
       var saltStr = base64Url(vaultSalt);
 
       setLocalVault(currentUser.email, {
@@ -438,6 +508,7 @@
     S.otab = vault.otab || "data";
     S.pv = vault.pv || null;
     S.bk = vault.bk || null;
+    S.rk = (vault.rk && normalizeRecoveryCode(vault.rk)) ? vault.rk : generateRecoveryCode();
     S.tempShare = vault.tempShare || null;
     if (window.IDCPrivate) window.IDCPrivate.reset();
     S.pin = null;
@@ -467,13 +538,13 @@
       try {
         vaultSalt = fromBase64Url(sourceRow.salt);
         vaultKey = await window.IDCrypto.fromPass(password, vaultSalt);
-        vault = await window.IDCrypto.dec(sourceRow.ciphertext, vaultKey);
+        vault = await decryptVaultCiphertext(sourceRow.ciphertext, vaultKey);
         if (!isSafeVault(vault)) throw new Error("Encrypted vault format is invalid");
       } catch (decErr) {
         if (remoteRow && localRow && sourceRow === remoteRow) {
           vaultSalt = fromBase64Url(localRow.salt);
           vaultKey = await window.IDCrypto.fromPass(password, vaultSalt);
-          vault = await window.IDCrypto.dec(localRow.ciphertext, vaultKey);
+          vault = await decryptVaultCiphertext(localRow.ciphertext, vaultKey);
           if (!isSafeVault(vault)) throw new Error("Encrypted vault format is invalid");
         } else {
           throw decErr;
@@ -526,6 +597,24 @@
   // Client-side login back-off. This is only a UX layer; the real rate limit is enforced by
   // Supabase Auth (see supabase/config.toml [auth.rate_limit]) because the browser can be bypassed.
   var THROTTLE_KEY = "idc_login_throttle";
+  function wipeLocalDeviceOnly() {
+    // SECURITY: Wipes cached vaults & biometric keys ONLY on this phone/browser;
+    // NEVER deletes or modifies the user's encrypted vault in Supabase (idc_vaults).
+    memLocalVaults = null;
+    try {
+      localStorage.removeItem(LOCAL_VAULTS_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem("idcDemoV8");
+      localStorage.removeItem("idc_card_bundles_v1");
+    } catch (e) {}
+    try {
+      if (typeof indexedDB !== "undefined" && indexedDB.deleteDatabase) {
+        indexedDB.deleteDatabase("idc_outer_bio_v1");
+      }
+    } catch (e) {}
+  }
+  window.IDCWipeLocalDeviceOnly = wipeLocalDeviceOnly;
+
   function throttleState() {
     try { return JSON.parse(localStorage.getItem(THROTTLE_KEY)) || { n: 0, until: 0 }; }
     catch (e) { return { n: 0, until: 0 }; }
@@ -537,8 +626,14 @@
   function throttleFail() {
     var st = throttleState();
     st.n = (st.n || 0) + 1;
-    if (st.n >= 5) st.until = Date.now() + 30000 * Math.pow(2, Math.min(st.n - 5, 5));
+    var wipedLocal = false;
+    if (st.n >= 5) {
+      st.until = Date.now() + 30000 * Math.pow(2, Math.min(st.n - 5, 5));
+      wipeLocalDeviceOnly();
+      wipedLocal = true;
+    }
     try { localStorage.setItem(THROTTLE_KEY, JSON.stringify(st)); } catch (e) {}
+    return wipedLocal;
   }
   function throttleReset() {
     try { localStorage.removeItem(THROTTLE_KEY); } catch (e) {}
@@ -610,7 +705,10 @@
     }
     if (result.error || !result.data || !result.data.user) {
       setAuthBusy(false);
-      throttleFail();
+      var wiped = throttleFail();
+      if (wiped) {
+        return setError("5 محاولات خاطئة: تم مسح البيانات المحلية من هذا الجهاز لحمايتك (بياناتك على السحابة محفوظة). جرّب بعد 30 ثانية.");
+      }
       return setError(appError(result.error));
     }
     try {
@@ -635,49 +733,151 @@
     if (!backendRequired()) return;
     var email = v("fp").toLowerCase();
     if (!emailValid(email)) return setError("يرجى إدخال بريد إلكتروني صحيح.");
-    var result = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
+    setAuthBusy(true, "جاري إرسال كود OTP…");
+    var result;
+    try {
+      result = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://idc-ui.github.io/IDC/"
+      });
+    } catch (e) {
+      setAuthBusy(false);
+      return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
+    }
+    setAuthBusy(false);
     if (result.error) return setError(appError(result.error));
     au.d = { em: email };
+    err = "";
     A("f2");
+    tst("تم إرسال كود التحقق (OTP) إلى بريدك الإلكتروني.");
   };
 
-  window.doF2 = function () {
-    A("login");
-    tst("لو البريد مسجل، هيوصلك رابط استعادة من Supabase.");
+  window.doVerifyResetOtp = async function () {
+    if (!backendRequired()) return;
+    var email = String((au.d && au.d.em) || v("fp") || "").trim().toLowerCase();
+    var token = String(v("otpCode") || "").replace(/\s+/g, "");
+    if (!emailValid(email)) return setError("يرجى الرجوع وإدخال البريد الإلكتروني أولًا.");
+    if (!/^\d{6,8}$/.test(token)) return setError("يرجى إدخال كود الـ OTP المكوّن من 6 إلى 8 أرقام من البريد.");
+
+    err = "";
+    setAuthBusy(true, "جاري التحقق من الكود…");
+    var res;
+    try {
+      res = await client.auth.verifyOtp({ email: email, token: token, type: "recovery" });
+      if (res && res.error) {
+        res = await client.auth.verifyOtp({ email: email, token: token, type: "email" });
+      }
+    } catch (e) {
+      setAuthBusy(false);
+      return setError("تعذر الاتصال للتحقق من الكود. حاول مرة أخرى.");
+    }
+    setAuthBusy(false);
+    if (!res || res.error || !res.data || !res.data.user) {
+      return setError("كود التحقق غير صحيح أو منتهي الصلاحية. اطلب كودًا جديدًا.");
+    }
+    recoveryPending = true;
+    au.d = { em: email };
+    err = "";
+    A("f3");
+    tst("تم التحقق من الكود ✓ اختر كلمة المرور الجديدة.");
   };
+
+  window.doF2 = window.doVerifyResetOtp;
 
   window.doF3 = async function () {
-    if (!backendRequired() || !recoveryPending) return setError("ابدأ الاستعادة من رابط البريد المرسل بواسطة Supabase.");
+    if (!backendRequired() || !recoveryPending) return setError("أدخل كود الـ OTP المرسل لبريدك أولًا للمتابعة.");
     var password = v("np");
-    var newProblem = passwordProblem(password, "");
+    var emailHint = (au.d && au.d.em) || "";
+    var newProblem = passwordProblem(password, emailHint);
     if (newProblem) return setError(newProblem);
     if (password !== v("np2")) return setError("كلمتا المرور غير متطابقتين.");
 
     var userResult = await client.auth.getUser();
-    if (userResult.error || !userResult.data.user) return setError("انتهت صلاحية رابط الاستعادة. اطلب رابطًا جديدًا.");
+    if (userResult.error || !userResult.data || !userResult.data.user) return setError("انتهت جلسة الاستعادة. اطلب كود OTP جديدًا.");
+    var rUser = userResult.data.user;
     var saved = await client.from("idc_vaults")
       .select("salt,ciphertext")
-      .eq("user_id", userResult.data.user.id)
+      .eq("user_id", rUser.id)
       .maybeSingle();
     if (saved.error) return setError("تعذر التحقق من المحفظة المشفرة قبل تغيير كلمة المرور.");
 
-    if (saved.data) {
-      try {
-        var oldSalt = fromBase64Url(saved.data.salt);
-        var candidateKey = await window.IDCrypto.fromPass(password, oldSalt);
-        await window.IDCrypto.dec(saved.data.ciphertext, candidateKey);
-      } catch (error) {
-        return setError("كلمة المرور الجديدة لا تفتح المحفظة الحالية. بيانات E2E لا يمكن استعادتها بدون كلمة المرور القديمة.");
+    var recoveredVault = null;
+    var rkInput = v("rkInput");
+    var resetConfirm = Boolean(typeof document !== "undefined" && document.getElementById("resetVaultConfirm") && document.getElementById("resetVaultConfirm").checked);
+
+    if (saved.data && saved.data.ciphertext) {
+      if (rkInput) {
+        try {
+          recoveredVault = await unwrapVaultWithRecoveryKey(saved.data.ciphertext, rkInput);
+        } catch (rkErr) {
+          return setError("كود الاسترداد الشخصي غير صحيح. تأكد من كتابته كاملًا أو فعّل خيار بدء محفظة جديدة.");
+        }
+      } else {
+        try {
+          var oldSalt = fromBase64Url(saved.data.salt);
+          var candidateKey = await window.IDCrypto.fromPass(password, oldSalt);
+          recoveredVault = await decryptVaultCiphertext(saved.data.ciphertext, candidateKey);
+        } catch (decErr) {
+          if (!resetConfirm) {
+            return setError("لاسترجاع بياناتك المشفرة القديمة أدخل «كود الاسترداد الشخصي»، أو فعّل خيار «بدء محفظة جديدة» بالأسفل لتعيين كلمة المرور الجديدة.");
+          }
+        }
       }
     }
 
     var update = await client.auth.updateUser({ password: password });
     if (update.error) return setError(appError(update.error));
+    var finalUser = (update.data && update.data.user) || rUser;
+    var defaultName = (finalUser.user_metadata && finalUser.user_metadata.display_name) || (finalUser.email ? finalUser.email.split("@")[0] : "مستخدم");
+
+    vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+    vaultKey = await window.IDCrypto.fromPass(password, vaultSalt);
+    if (!recoveredVault) {
+      recoveredVault = {
+        p: { n: defaultName, nid: "", bd: "", ph: "", ct: "", role: "student" },
+        items: [],
+        pv: null,
+        sec: S.sec,
+        log: [],
+        em: null,
+        tab: "public",
+        nav: "home",
+        otab: "data"
+      };
+    }
     recoveryPending = false;
-    await loadVault(password, update.data.user || userResult.data.user, false);
-    tst("تم تحديث كلمة المرور وفتح المحفظة المشفرة.");
+    throttleReset();
+    applyVaultToState(recoveredVault, finalUser);
+    saveActiveSession();
+    try { await persistVault(); } catch (e) {}
+    go({ screen: "home", nav: "home" });
+    tst("تم تحديث كلمة المرور وفتح المحفظة بنجاح ✓");
+  };
+
+  window.idcChangePasswordInApp = async function (newPassword, confirmPassword) {
+    if (!backendRequired()) return false;
+    if (!currentUser || !vaultKey) {
+      tst("افتح حسابك أولًا (بالبصمة أو كلمة المرور) لتغيير كلمة المرور.");
+      return false;
+    }
+    var prob = passwordProblem(newPassword, currentUser.email || "");
+    if (prob) {
+      tst(prob);
+      return false;
+    }
+    if (newPassword !== confirmPassword) {
+      tst("كلمتا المرور غير متطابقتين.");
+      return false;
+    }
+    var upd = await client.auth.updateUser({ password: newPassword });
+    if (upd.error) {
+      tst(appError(upd.error));
+      return false;
+    }
+    vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+    vaultKey = await window.IDCrypto.fromPass(newPassword, vaultSalt);
+    await persistVault();
+    tst(S.lang === "en" ? "Password updated & vault re-encrypted ✓" : "تم تحديث كلمة المرور وإعادة تشفير المحفظة بنجاح ✓");
+    return true;
   };
 
   window.resend = async function () {
@@ -706,6 +906,7 @@
     S.em = null;
     S.pv = null;
     S.bk = null;
+    S.rk = null;
     S.tempShare = null;
     S.pOwner = null;
     S.pin = null;
@@ -1000,7 +1201,7 @@
       if (!sourceRow || !sourceRow.ciphertext) {
         return setError(S.lang === "en" ? "Please sign in with your email and password first." : "سجّل الدخول بالبريد وكلمة المرور أول مرة.");
       }
-      var vault = await window.IDCrypto.dec(sourceRow.ciphertext, restoredKey);
+      var vault = await decryptVaultCiphertext(sourceRow.ciphertext, restoredKey);
       if (!isSafeVault(vault)) throw new Error("invalid_vault");
       vaultKey = restoredKey;
       vaultSalt = restoredSalt;
@@ -1022,7 +1223,8 @@
         '<div class="f"><input id="unlockPassword" type="password" dir="ltr" placeholder=" "><label>كلمة المرور</label></div>' +
         '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
         '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
-        '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button>');
+        '<button class="bt t w" style="margin-top:8px" onclick="window.idcStartOtpFromLock()">نسيت كلمة المرور؟ استعادة بكود OTP</button>' +
+        '<button class="bt t w" style="margin-top:4px" onclick="window.idcSignOut()">تسجيل الخروج</button>');
     return '<div style="text-align:end"><button class="bt t" onclick="setLang(S.lang===\'en\'?\'ar\':\'en\')">' + (S.lang === "en" ? "العربية" : "English") + '</button></div>' +
       '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتح بالبصمة / Face ID أو استخدم وضع الطوارئ.</div>' +
       window.idcOuterPartitionsBarHtml() +
@@ -1040,6 +1242,19 @@
     }
   }
 
+  window.idcStartOtpFromLock = async function () {
+    var savedEm = (currentUser && currentUser.email) || "";
+    try { if (client) await client.auth.signOut(); } catch (e) {}
+    currentUser = null;
+    vaultKey = null;
+    vaultSalt = null;
+    land = false;
+    err = "";
+    au = { m: "f1", d: { em: savedEm } };
+    S.screen = "auth";
+    R();
+  };
+
   window.doLoginWithValues = async function (email, password) {
     var wait = throttleLeft();
     if (wait) return setError("محاولات كتير. جرّب بعد " + wait + " ثانية.");
@@ -1050,7 +1265,9 @@
       return setError("تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
     }
     if (result.error || !result.data || !result.data.user) {
-      throttleFail();
+      if (throttleFail()) {
+        return setError("5 محاولات خاطئة: تم مسح البيانات المحلية من هذا الجهاز فقط (بياناتك على السحابة محفوظة). جرّب بعد 30 ثانية.");
+      }
       return setError("تعذر فك المحفظة. تأكد من البريد وكلمة المرور.");
     }
     try {
@@ -1060,7 +1277,9 @@
     } catch (e) {
       vaultKey = null;
       vaultSalt = null;
-      throttleFail();
+      if (throttleFail()) {
+        return setError("5 محاولات خاطئة: تم مسح البيانات المحلية من هذا الجهاز فقط (بياناتك على السحابة محفوظة). جرّب بعد 30 ثانية.");
+      }
       setError("تعذر فك المحفظة. تأكد من كلمة المرور الصحيحة.");
     }
   };
@@ -1135,6 +1354,7 @@
       S.items = [];
       S.pv = null;
       S.bk = null;
+      S.rk = null;
       S.tempShare = null;
       S.em = null;
       un = false;

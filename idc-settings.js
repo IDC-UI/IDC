@@ -223,6 +223,9 @@
             L("Outer App Fingerprint / Face ID|بصمة / Face ID للدخول من برا", function () {
               return window.idcHasOuterBio && window.idcHasOuterBio() ? "Registered|مفعّلة ✓" : "Set up|تفعيل";
             }, "outerbio"),
+            L("Personal Recovery Key|كود الاسترداد الشخصي للطوارئ", function () {
+              return (window.idcGetRecoveryKey && window.idcGetRecoveryKey()) ? "Ready|جاهز ✓" : "";
+            }, "reckey"),
             L("Change encryption key|تغيير مفتاح التشفير", "", "key"),
             L("Active sessions|الجلسات النشطة", function () { return "" + st.lists.sessions.length; }, "sessions"),
             L("Login history|سجل الدخول", "", "history"),
@@ -396,15 +399,47 @@
       password: {
         t: "Change password|تغيير كلمة المرور",
         b: [
-          P_("Use at least 12 characters with a mix of letters and numbers.|استخدم 12 حرف على الأقل بين حروف وأرقام."),
+          P_("Since your vault is already unlocked (via Fingerprint, Face ID, or password), you can set a new password directly without needing the old one. Use at least 12 characters with letters and numbers.|بما أن محفظتك مفتوحة الآن (بالبصمة أو Face ID أو كلمة المرور)، يمكنك تعيين كلمة مرور جديدة مباشرة وإعادة تشفير بياناتك بدون الحاجة لكلمة المرور القديمة (12 حرفًا وأرقامًا على الأقل)."),
           F([
-            ["Current password|كلمة المرور الحالية", "", "pw"],
-            ["New password|كلمة المرور الجديدة", "", "pw"],
-            ["Confirm new password|تأكيد كلمة المرور", "", "pw"]
-          ], "Update password|تحديث كلمة المرور", "Password updated|تم تحديث كلمة المرور", function (v) {
+            ["New password (12+ chars & digits)|كلمة المرور الجديدة (12 حرفًا وأرقامًا على الأقل)", "", "pw"],
+            ["Confirm new password|تأكيد كلمة المرور الجديدة", "", "pw"]
+          ], "Update password & re-encrypt vault|تحديث كلمة المرور وإعادة التشفير", "Updating password…|جاري التحديث…", function (v) {
             return reqd(v, "Fill in all fields|املى كل الخانات") ||
-              (v[1].length < 8 ? "Password must be at least 8 characters|كلمة المرور لازم تكون 8 حروف على الأقل" : "") ||
-              (v[1] !== v[2] ? "Passwords do not match|كلمتين المرور مش متطابقين" : "");
+              (v[0].length < 12 ? "Password must be at least 12 characters|كلمة المرور لازم تكون 12 حرفًا على الأقل" : "") ||
+              (v[0] !== v[1] ? "Passwords do not match|كلمتا المرور غير متطابقتين" : "");
+          }, function (v) {
+            if (typeof window.idcChangePasswordInApp === "function") {
+              window.idcChangePasswordInApp(v[0], v[1]).then(function (ok) {
+                if (ok && window.idcOuterBioRegister) {
+                  // Re-sync local biometric record if user wants
+                }
+                render();
+              });
+            }
+          })
+        ]
+      },
+      reckey: {
+        t: "Personal Recovery Key|كود الاسترداد الشخصي",
+        b: [
+          P_("Save this code in a safe place outside the app. If you ever forget your password and verify via Email OTP, entering this Recovery Key restores 100% of your encrypted vault data.|احتفظ بهذا الكود في مكان آمن خارج التطبيق. إذا نسيت كلمة المرور مستقبلًا ودخلت بكود الـ OTP من الإيميل، يضمن لك هذا الكود استرجاع كل بياناتك المشفرة بدون فقدان أي شيء."),
+          KV([["Recovery Key|كود الاسترداد", function () {
+            return (window.idcGetRecoveryKey && window.idcGetRecoveryKey()) || "Sign in with a real account to view|سجّل الدخول بحساب فعلي للعرض";
+          }]]),
+          BT("Copy Recovery Key|نسخ كود الاسترداد", "primary", function () {
+            var rk = window.idcGetRecoveryKey ? window.idcGetRecoveryKey() : "";
+            if (rk && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(rk).catch(function () {});
+              toast(B("Recovery Key copied ✓|تم نسخ كود الاسترداد ✓"));
+            }
+          }),
+          BT("Generate new Recovery Key|إنشاء كود استرداد جديد", "sec", function () {
+            if (window.idcRegenerateRecoveryKey) {
+              window.idcRegenerateRecoveryKey().then(function () {
+                toast(B("New Recovery Key generated ✓|تم توليد كود استرداد جديد ✓"));
+                render();
+              });
+            }
           })
         ]
       },

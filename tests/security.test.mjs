@@ -119,6 +119,13 @@ check("S41 Card Bank supports Egyptian banks & fintechs (NBE, Banque Misr, CIB, 
   /clearAllCards/.test(bankSrc) &&
   /<svg/.test(bankSrc) &&
   /id:\s*"banking"/.test(settingsSrc));
+check("S42 Email OTP password recovery, Recovery Key envelope, in-app password change, local-only 5-fail wipe, and production site_url are configured",
+  /^site_url\s*=\s*"https:\/\/idc-ui\.github\.io\/IDC\/"/m.test(cfg) &&
+  /doVerifyResetOtp/.test(supa) &&
+  /verifyOtp/.test(supa) &&
+  /wipeLocalDeviceOnly/.test(supa) &&
+  /idcChangePasswordInApp/.test(supa) &&
+  /doVerifyResetOtp/.test(html));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
@@ -140,17 +147,18 @@ const cryptoSrc = plusLines.slice(10, 47).join("\n"); // real b64/ub64 + IDCrypt
 const USER = { id: "11111111-2222-4333-8444-555555555555", email: "maria@example.com", user_metadata: { display_name: "Maria" } };
 const GOOD_PW = "correct-horse-9battery";
 
-function boot({ session = null, remoteRow = null, signIn, signUp, localStore = {}, invokeOk = true } = {}) {
+function boot({ session = null, remoteRow = null, signIn, signUp, verifyOtp, localStore = {}, invokeOk = true } = {}) {
   const store = new Map(Object.entries(localStore));
-  const calls = { signIn: 0, signUp: 0, directUpsert: 0, invoke: 0, signOut: 0 };
+  const calls = { signIn: 0, signUp: 0, directUpsert: 0, remoteDelete: 0, invoke: 0, signOut: 0, resetEmail: 0, verifyOtp: 0, updateUser: 0 };
   const handlers = [];
   const form = {};
+  const checkboxes = {};
   const app = { innerHTML: "" };
   const ctx = {
     console, TextEncoder, TextDecoder, Uint8Array, Promise, JSON, Math, Date, Object, Array, String, Number, Boolean, Error, RegExp, parseInt, URL,
     atob, btoa, setTimeout, clearTimeout, crypto: globalThis.crypto, navigator: { onLine: true },
     localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => void store.set(k, String(v)), removeItem: (k) => void store.delete(k) },
-    document: { getElementById: (id) => (id === "app" ? app : { value: form[id] ?? "", textContent: "" }), querySelector: () => null },
+    document: { getElementById: (id) => (id === "app" ? app : { value: form[id] ?? "", checked: Boolean(checkboxes[id]), textContent: "" }), querySelector: () => null },
     location: { origin: "https://app.example.github.io", pathname: "/IDC/", hash: "" },
   };
   ctx.window = ctx;
@@ -163,12 +171,16 @@ function boot({ session = null, remoteRow = null, signIn, signUp, localStore = {
       getSession: async () => ({ data: { session: { access_token: "t" } } }),
       getUser: async () => ({ data: { user: USER }, error: null }),
       onAuthStateChange: (cb) => { handlers.push(cb); if (session) setTimeout(() => cb("INITIAL_SESSION", session), 0); },
-      resetPasswordForEmail: async () => ({ error: null }), updateUser: async () => ({ data: { user: USER }, error: null }), resend: async () => ({ error: null }),
+      resetPasswordForEmail: async () => { calls.resetEmail++; return { error: null }; },
+      verifyOtp: async (a) => { calls.verifyOtp++; return verifyOtp ? verifyOtp(a) : { data: { user: USER, session: { access_token: "t" } }, error: null }; },
+      updateUser: async (a) => { calls.updateUser++; ctx.__updatedUser = a; return { data: { user: USER }, error: null }; },
+      resend: async () => ({ error: null }),
     },
     functions: { invoke: async (name, { body }) => { calls.invoke++; if (!invokeOk) return { error: { message: "boom" } }; ctx.__saved = body; return { data: { saved: true }, error: null }; } },
     from: () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: remoteRow, error: null }) }) }),
       upsert: async () => { calls.directUpsert++; return { error: null }; },
+      delete: () => ({ eq: async () => { calls.remoteDelete++; return { error: null }; } }),
     }),
     storage: { from: () => ({ remove: async () => ({}), download: async () => ({ error: {} }) }) },
   };
@@ -180,11 +192,11 @@ function boot({ session = null, remoteRow = null, signIn, signUp, localStore = {
     esc: (x) => String(x == null ? "" : x).replace(/[&<>"']/g, "_"), mi: () => "", mk: () => ({}),
     v: (id) => String(form[id] ?? "").trim(), tst: (m) => toasts.push(m),
     R() { app.innerHTML = "screen:" + ctx.S.screen; }, go(o) { Object.assign(ctx.S, o); ctx.err = ""; ctx.R(); },
-    sv() {}, pickAtt() {}, attRow() { return ""; }, vw() {}, dla() {}, del() {}, fdel() {}, A() {},
+    sv() {}, pickAtt() {}, attRow() { return ""; }, vw() {}, dla() {}, del() {}, fdel() {}, A(m) { ctx.au.m = m; ctx.err = ""; ctx.R(); },
   });
   vm.runInContext("(function(){" + cryptoSrc + "\n})();", ctx);
   vm.runInContext(read("idc-supabase.js"), ctx);
-  return { ctx, store, calls, form, app, toasts, handlers, dump: () => [...store.entries()].map(([k, v]) => k + "=" + v).join("\n") };
+  return { ctx, store, calls, form, checkboxes, app, toasts, handlers, dump: () => [...store.entries()].map(([k, v]) => k + "=" + v).join("\n") };
 }
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 
@@ -518,6 +530,74 @@ let savedBody;
     check("T13b adding NBE, Banque Misr, and Telda cards renders bank SVG logos + Meeza/VISA/Mastercard badges and keeps only last 4 digits", false, "getProviders missing");
     check("T13c IBAN and InstaPay address can be updated and rendered cleanly", false, "saveIbanValues missing");
     check("T13d individual card removal and clearAllCards wipe cards cleanly without errors", false, "clearAllCards missing");
+  }
+}
+
+// T14: 5-fail local-device-only wipe, Email OTP verification, Recovery Key zero-loss restore, and in-app password change
+{
+  // T14a: 5 wrong password attempts wipe cached local vaults on the phone WITHOUT deleting remote Supabase data
+  const seed = boot();
+  Object.assign(seed.form, { lg: "maria@example.com", lp: GOOD_PW });
+  await seed.ctx.doLogin();
+  await tick();
+  const cachedVaultJson = seed.store.get("idc_local_vaults_v2");
+  const remoteSaved = seed.ctx.__saved; // { salt, ciphertext }
+  const recKey = typeof seed.ctx.idcGetRecoveryKey === "function" ? seed.ctx.idcGetRecoveryKey() : "";
+
+  const phone = boot({
+    remoteRow: remoteSaved,
+    localStore: { idc_local_vaults_v2: cachedVaultJson, idcDemoV8: '{"p":{"n":"Cached"}}' },
+    signIn: () => ({ data: null, error: { message: "Invalid login credentials" } })
+  });
+  Object.assign(phone.form, { lg: "maria@example.com", lp: "wrong-pass-attempt" });
+  for (let i = 0; i < 5; i++) await phone.ctx.doLogin();
+  check("T14a 5 wrong password attempts wipe phone localStorage cache while keeping remote Supabase DB untouched",
+    !phone.store.has("idc_local_vaults_v2") && !phone.store.has("idcDemoV8") && phone.calls.remoteDelete === 0 && phone.calls.invoke === 0);
+
+  // T14b & T14c: Email OTP flow (doF1 -> doVerifyResetOtp -> doF3) + Recovery Key restores encrypted vault with zero data loss
+  if (typeof seed.ctx.doVerifyResetOtp === "function" && recKey) {
+    // Seed an item into Maria's vault first so we prove zero data loss!
+    seed.ctx.S.items = [{ id: "doc1", title: "شهادة تخرج أصلية", value: "امتياز" }];
+    await seed.ctx.IDCPersist();
+    const rowWithItem = seed.ctx.__saved;
+    const activeRecKey = seed.ctx.idcGetRecoveryKey();
+    check("T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function",
+      Boolean(rowWithItem && /^[A-Za-z0-9_-]+$/.test(rowWithItem.ciphertext) && /^[A-Za-z0-9_-]{22}$/.test(rowWithItem.salt)));
+
+    const rec = boot({ remoteRow: rowWithItem });
+    rec.form.fp = "maria@example.com";
+    await rec.ctx.doF1();
+    rec.form.otpCode = "482910";
+    await rec.ctx.doVerifyResetOtp();
+    const otpVerifiedStage = rec.ctx.au.m;
+
+    const NEW_PW = "brand-new-pass99";
+    Object.assign(rec.form, { np: NEW_PW, np2: NEW_PW, rkInput: activeRecKey });
+    await rec.ctx.doF3();
+    await tick();
+    check("T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss",
+      otpVerifiedStage === "f3" && rec.calls.verifyOtp >= 1 && rec.calls.updateUser === 1 &&
+      rec.ctx.S.screen === "home" && rec.ctx.S.items.length === 1 && rec.ctx.S.items[0].title === "شهادة تخرج أصلية");
+
+    // T14d: In-app password change when already unlocked via Fingerprint (Maria's exact case!) + fresh-vault fallback
+    const changeOk = typeof rec.ctx.idcChangePasswordInApp === "function"
+      ? await rec.ctx.idcChangePasswordInApp("even-newer-pass88", "even-newer-pass88")
+      : false;
+    const freshRec = boot({ remoteRow: rowWithItem });
+    freshRec.form.fp = "maria@example.com";
+    await freshRec.ctx.doF1();
+    freshRec.form.otpCode = "193847";
+    await freshRec.ctx.doVerifyResetOtp();
+    Object.assign(freshRec.form, { np: "fresh-start-pass77", np2: "fresh-start-pass77", rkInput: "" });
+    freshRec.checkboxes.resetVaultConfirm = true;
+    await freshRec.ctx.doF3();
+    await tick();
+    check("T14d unlocked biometric user can change password without old password, and OTP reset supports confirmed fresh-vault fallback",
+      changeOk === true && freshRec.calls.updateUser === 1 && freshRec.ctx.S.screen === "home");
+  } else {
+    check("T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function", false, "doVerifyResetOtp or recKey missing");
+    check("T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss", false, "doVerifyResetOtp missing");
+    check("T14d unlocked biometric user can change password without old password, and OTP reset supports confirmed fresh-vault fallback", false, "idcChangePasswordInApp missing");
   }
 }
 

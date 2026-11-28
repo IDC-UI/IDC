@@ -3,8 +3,8 @@ project_id = "idc"
 # Applied with `supabase config push`. Set the real GitHub Pages URL first.
 [auth]
 enabled = true
-# site_url = "https://YOUR_USER.github.io/IDC/"
-# additional_redirect_urls = ["https://YOUR_USER.github.io/IDC/"]
+site_url = "https://idc-ui.github.io/IDC/"
+additional_redirect_urls = ["https://idc-ui.github.io/IDC/", "https://idc-ui.github.io/IDC/**"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

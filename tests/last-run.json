@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-28T10:18:36.816Z",
-  "passed": 81,
-  "total": 81,
+  "at": "2026-11-28T13:15:39.784Z",
+  "passed": 86,
+  "total": 86,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -209,6 +209,11 @@
       "detail": ""
     },
     {
+      "name": "S42 Email OTP password recovery, Recovery Key envelope, in-app password change, local-only 5-fail wipe, and production site_url are configured",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "name": "E1  allowed origin gets CORS header, no wildcard",
       "ok": true,
       "detail": ""
@@ -405,6 +410,26 @@
     },
     {
       "name": "T13e luxury tiers (Platinum brushed band, Titanium S-wave chrome, Infinite geometric line-art) render distinct skins and badges",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T14a 5 wrong password attempts wipe phone localStorage cache while keeping remote Supabase DB untouched",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T14d unlocked biometric user can change password without old password, and OTP reset supports confirmed fresh-vault fallback",
       "ok": true,
       "detail": ""
     }
