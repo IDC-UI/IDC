@@ -55,7 +55,7 @@ check("S21 client caches public emergency storage and parallelizes independent a
 const settingsSrc = read("idc-settings.js");
 check("S22 Settings CSS enforces media-scoped light theme, focus-visible ring, and reduced-motion rule", /@media \(prefers-color-scheme:light\)/.test(settingsSrc) && /\.idc-st :focus-visible/.test(settingsSrc) && /@media \(prefers-reduced-motion:reduce\)/.test(settingsSrc));
 const allUiSrc = html + supa + read("idc-plus.js") + read("idc-private.js") + settingsSrc + read("idc-intro.js") + bankSrc;
-const femRe = /ابدئي|سجّلي|سجلي|افتحي|اكتبي|أدخلي|ادخلي|تحققي|جرّبي|جربي|اختاري|أضيفي|ضيفي|(?:^|\s|")فعّلي|حاولي|تأكدي|اتأكدي|أكدي|أكديه|أنتِ|محتاجة|مش عارفة|كلمينا|لا تشاركيه|تقدري|تقدرين|حدديه|تحدديه|بتدخلي|تكمليه|أنشئي|اطلبي|تجاوزتي|استني|ارفعي|رتّبي|اجمعي|شاركي|صدّري|دوسي|قوليه|كلمي|شيلي|بلّغي|املي|كمّلي|تطلعي|تخرجي|تعدّلي|قلّلي|قرّبي|انسخي|حطي|سيبيه|تحسي\s|تدوسي|تحذفي|عايزاها|معاكي|بتعرفيها|صاحبة الكارت|بتفتحيه|تبلّغ عن|متأكدة؟|تحتاجيها/;
+const femRe = /ابدئي|سجّلي|سجلي|افتحي|اكتبي|أدخلي|ادخلي|تحققي|جرّبي|جربي|اختاري|أضيفي|ضيفي|(?:^|\s|")فعّلي|حاولي|تأكدي|اتأكدي|أكدي|أكديه|أنتِ|محتاجة|مش عارفة|كلمينا|لا تشاركيه|تقدري|تقدرين|حدديه|تحدديه|بتدخلي|تكمليه|أنشئي|اطلبي|تجاوزتي|استني|ارفعي|رتّبي|اجمعي|شاركي|صدّري|دوسي|قوليه|كلمي|شيلي|بلّغي|املي|كمّلي|تطلعي|تخرجي|تعدّلي|قلّلي|قرّبي|انسخي|حطي|سيبيه|تحسي\s|تدوسي|تحذفي|عايزاها|معاكي|بتعرفيها|صاحبة الكارت|بتفتحيه|تبلّغ عن|متأكدة؟|تحتاجيها|استخدمي/;
 const femMatch = allUiSrc.match(femRe);
 check("S23 All UI copy is gender-neutral (no feminine-only address across HTML/JS)", !femMatch, femMatch ? "Found: " + femMatch[0] : "");
 const sqlRoutes = fs.existsSync(path.join(ROOT, "supabase/migrations/20261122010000_idc_user_routes.sql"))
@@ -90,6 +90,26 @@ check("S36 Private partition supports Duress PIN (decoy vault without decrypting
 check("S37 Card Bank implements spending limit (linear bar + 80% warn + block), hide balance (10s auto-rehide + biometric), 5 categories breakdown, and <=30d expiry alert", /bk-pg/.test(bankSrc) && /0\.8/.test(bankSrc) && /10000/.test(bankSrc) && /expDays/.test(bankSrc) && /transport/.test(bankSrc) && /bills/.test(bankSrc));
 check("S38 Direct LinkedIn flow normalizes HTTPS profile URLs and opens saved LinkedIn profile directly", /idcOpenLinkedIn/.test(plusSrc) && /idcNormalizeHttpsUrl/.test(plusSrc) && /idcOpenLinkedIn/.test(html));
 check("S39 Hourly Temporary Share (#s=...) supports 4/7/24h + custom hours and CV/Profile/Both scopes", /IDCTempShare/.test(plusSrc) && /IDCTempShare/.test(html) && /IDCTempShare/.test(settingsSrc));
+{
+  const enMatch = html.match(/var EN=(\{[^\n]+\});/);
+  const enDict = enMatch ? JSON.parse(enMatch[1]) : {};
+  const ks = Object.keys(enDict).sort((a, b) => b.length - a.length);
+  const trFn = (s) => {
+    if (enDict[s]) return enDict[s];
+    const t = s.trim();
+    if (enDict[t]) return s.replace(t, enDict[t]);
+    for (const k of ks) if (s.includes(k)) s = s.split(k).join(enDict[k]);
+    return s;
+  };
+  const mustTranslate = [
+    "الكارد بانك / IBAN", "بروفايل LinkedIn", "مشاركة مؤقتة", "فتح البروفايل ↗", "+ إضافة الرابط",
+    "تعديل رابط LinkedIn", "معرّف الرابط الشخصي", "معاينة وتصدير PDF", "رابط مؤقت", "حساب بنكي",
+    "رابط شخصي", "عرض المزيد (3)", "رجوع", "المحفظة مقفولة", "فتح المحفظة المشفرة",
+    "فتح بالبصمة / Face ID", "الدخول بالبصمة / Face ID"
+  ];
+  const untranslated = mustTranslate.filter((p) => /[\u0600-\u06FF]/.test(trFn(p)));
+  check("S40 English mode translates all Home quick-actions, LinkedIn/Share controls, CV actions, and Lock/Auth labels with zero leftover Arabic", untranslated.length === 0 && /applyLang/.test(supa), untranslated.length ? "Untranslated: " + untranslated.join(", ") : "");
+}
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };

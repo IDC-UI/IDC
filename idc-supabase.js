@@ -1023,7 +1023,8 @@
         '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--mu)"><input type="checkbox" id="regOuterBio" checked> تسجيل / تحديث البصمة أو Face ID عند الفتح</label>' +
         '<div class="err">' + esc(err) + '</div><button class="bt w" onclick="window.idcUnlockVault()">فتح المحفظة المشفرة</button>' +
         '<button class="bt t w" style="margin-top:8px" onclick="window.idcSignOut()">تسجيل الخروج</button>');
-    return '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتح بالبصمة / Face ID أو استخدمي وضع الطوارئ.</div>' +
+    return '<div style="text-align:end"><button class="bt t" onclick="setLang(S.lang===\'en\'?\'ar\':\'en\')">' + (S.lang === "en" ? "العربية" : "English") + '</button></div>' +
+      '<div class="ac"><div class="wm">IDC</div><h2 style="text-align:center;font-size:22px;margin:14px 0">المحفظة مقفولة</h2><div class="mu" style="text-align:center">جلسة الدخول محفوظة. افتح بالبصمة / Face ID أو استخدم وضع الطوارئ.</div>' +
       window.idcOuterPartitionsBarHtml() +
       body +
       '</div>';
@@ -1155,6 +1156,7 @@
   window.R = function () {
     if (client && currentUser && !vaultKey && !S.preview && !/^#(e|s)=/.test(location.hash)) {
       document.getElementById("app").innerHTML = lockMarkup();
+      if (typeof window.applyLang === "function") window.applyLang();
       return;
     }
     renderApp();
