@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-28T13:59:04.830Z",
-  "passed": 87,
-  "total": 87,
+  "at": "2026-11-28T14:12:40.066Z",
+  "passed": 88,
+  "total": 88,
   "results": [
     {
       "name": "S1  HTTPS redirect script is the first script in <head>",
@@ -210,6 +210,11 @@
     },
     {
       "name": "S42 Email OTP password recovery, Recovery Key envelope, in-app password change, local-only 5-fail wipe, and production site_url are configured",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S43 All Supabase auth/OTP/rate-limit error messages translate 100% cleanly in English mode (no mixed Arabic/Other)",
       "ok": true,
       "detail": ""
     },

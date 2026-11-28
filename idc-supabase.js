@@ -136,6 +136,9 @@
 
   function appError(error) {
     var message = String(error && (error.message || error.code) || "");
+    if (/over_email_send_rate_limit|rate limit|too many requests|after \d+ seconds/i.test(message)) {
+      return "تم تجاوز الحد المؤقت لإرسال رسائل البريد في Supabase (رسالتان في الساعة للخدمة المجانية). انتظر قليلًا أو افتح آخر رسالة وصلتك.";
+    }
     if (/email not confirmed/i.test(message)) return "أكّد بريدك الإلكتروني من الرابط المرسل ثم سجّل الدخول.";
     if (/invalid login credentials/i.test(message)) return "البريد أو كلمة المرور غير صحيحة.";
     if (/already registered|user already registered/i.test(message)) return "هذا البريد مسجل بالفعل. سجّل الدخول.";
@@ -732,6 +735,7 @@
   window.doF1 = async function () {
     if (!backendRequired()) return;
     var email = v("fp").toLowerCase();
+    au.d = { em: email };
     if (!emailValid(email)) return setError("يرجى إدخال بريد إلكتروني صحيح.");
     setAuthBusy(true, "جاري إرسال كود OTP…");
     var result;

@@ -126,6 +126,30 @@ check("S42 Email OTP password recovery, Recovery Key envelope, in-app password c
   /wipeLocalDeviceOnly/.test(supa) &&
   /idcChangePasswordInApp/.test(supa) &&
   /doVerifyResetOtp/.test(html));
+{
+  const enMatch = html.match(/var EN=(\{[^\n]+\});/);
+  const enDict = enMatch ? JSON.parse(enMatch[1]) : {};
+  const ks = Object.keys(enDict).sort((a, b) => b.length - a.length);
+  const trFn = (s) => {
+    if (enDict[s]) return enDict[s];
+    const t = s.trim();
+    if (enDict[t]) return s.replace(t, enDict[t]);
+    for (const k of ks) if (s.includes(k)) s = s.split(k).join(enDict[k]);
+    return s;
+  };
+  const errPhrases = [
+    "تعذر إكمال الطلب. تحقق من البيانات وحاول مرة أخرى.",
+    "تعذر الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
+    "البريد أو كلمة المرور غير صحيحة.",
+    "هذا البريد مسجل بالفعل. سجّل الدخول.",
+    "يرجى إدخال بريد إلكتروني صحيح.",
+    "كود التحقق غير صحيح أو منتهي الصلاحية. اطلب كودًا جديدًا.",
+    "تم تجاوز الحد المؤقت لإرسال رسائل البريد في Supabase (رسالتان في الساعة للخدمة المجانية). انتظر قليلًا أو افتح آخر رسالة وصلتك."
+  ];
+  const broken = errPhrases.filter((p) => /[\u0600-\u06FF]/.test(trFn(p)));
+  check("S43 All Supabase auth/OTP/rate-limit error messages translate 100% cleanly in English mode (no mixed Arabic/Other)",
+    broken.length === 0 && /over_email_send_rate_limit|rate limit/i.test(supa), broken.length ? "Broken: " + broken[0] : "");
+}
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
