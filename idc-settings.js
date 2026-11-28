@@ -73,6 +73,7 @@
     chev: '<path d="M9 5l7 7-7 7"/>',
     back: '<path d="M15 5l-7 7 7 7"/>',
     account: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    bank: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
     nfc: '<rect x="3" y="6" width="14" height="11" rx="2"/><path d="M20 9c1.2 1.5 1.2 4.5 0 6"/>',
     emergency: '<path d="M12 4v16M4 12h16"/>',
     notif: '<path d="M6 16v-5a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/>',
@@ -171,9 +172,9 @@
       g: [{
         items: [
           L("Edit personal information|تعديل البيانات الشخصية", "", "edit"),
-          L("Bank accounts (IBAN / InstaPay)|حسابات البنك و InstaPay", function () {
-            var bks = (typeof S !== "undefined" && Array.isArray(S.items)) ? S.items.filter(function (i) { return i.type === "bank"; }).length : 0;
-            return String(bks);
+          L("Bank cards & InstaPay|كروت البنوك و InstaPay", function () {
+            var cCount = (window.IDCBank && typeof window.IDCBank.getCards === "function") ? window.IDCBank.getCards().length : 0;
+            return String(cCount);
           }, "banks"),
           L("Change email|تغيير الإيميل", function () { return (typeof S !== "undefined" && S.userEmail) || "user@idc.app"; }, "email"),
           L("Change password|تغيير كلمة المرور", "", "password"),
@@ -181,6 +182,21 @@
           L("My documents & licenses|وثائقي وتراخيصي", function () { return typeof S !== "undefined" && Array.isArray(S.items) ? String(S.items.length) : "0"; }, "docs"),
           L("Manage connected accounts|إدارة الحسابات المربوطة", function () { return st.lists.accts.filter(function (a) { return a.c; }).map(function (a) { return a.a; }).join(", ") || "—"; }, "accounts"),
           D("Delete account|حذف الحساب", "delete")
+        ]
+      }]
+    },
+    {
+      id: "banking", ic: "bank", t: "Banks & Payment Cards|البنوك وكروت الدفع", d: "Manage NBE, Banque Misr, Telda & IBAN|إدارة كروت البنوك و Telda و IBAN",
+      note: "Supports National Bank of Egypt, Banque Misr, CIB, QNB, Telda, Klivvr, Nexta, myFawry, InstaPay & more. Only the last 4 digits are saved inside your encrypted vault; CVV is never stored.|يدعم البنك الأهلي المصري، بنك مصر، CIB، QNB، تيلدا Telda، Klivvr، Nexta، myFawry، InstaPay وغيرها. يُحفظ آخر 4 أرقام فقط داخل خزنتك المشفرة بدون CVV.",
+      g: [{
+        items: [
+          L("Open Card Bank|فتح الكارد بانك", function () {
+            var cs = (window.IDCBank && typeof window.IDCBank.getCards === "function") ? window.IDCBank.getCards() : [];
+            return String(cs.length);
+          }, "bk_open"),
+          L("Add Bank / Payment Card|إضافة كارد بنك أو شركة دفع", "", "bk_add"),
+          L("Manage & remove saved cards + IBAN|إدارة وحذف الكروت والـ IBAN", "", "banks"),
+          D("Clear all saved cards|مسح كل الكروت المحفوظة", "bk_clear")
         ]
       }]
     },
@@ -339,18 +355,26 @@
         })]
       },
       banks: {
-        t: "Bank accounts (IBAN / InstaPay)|حسابات البنك و InstaPay",
+        t: "Banks, Cards & InstaPay|البنوك والكروت و InstaPay",
         b: [
-          P_("Add your bank account, IBAN, or InstaPay address. Saved inside your encrypted Private Vault by default.|أضف حسابك البنكي أو رقم IBAN أو عنوان InstaPay. يُحفظ افتراضيًا داخل القسم الخاص المشفر."),
+          P_("Manage your saved bank & payment cards (NBE, Banque Misr, CIB, QNB, Telda, Klivvr, myFawry…), remove any card, or update your IBAN and InstaPay address.|تحكّم في كروتك البنكية وشركات الدفع المحفوظة (الأهلي، مصر، CIB، QNB، Telda، Klivvr، myFawry…)، أو احذف أي كارد، أو حدّث رقم IBAN وعنوان InstaPay."),
+          H("Saved Cards|الكروت المحفوظة"),
+          { k: "bk_cards" },
+          BT("+ Add Bank / Payment Card|+ إضافة كارد بنك أو شركة دفع", "primary", function () {
+            window.pg = { k: "bank-add" };
+            if (typeof window.R === "function") window.R();
+          }),
+          BT("Open Card Bank|فتح الكارد بانك بالكامل", "sec", function () {
+            window.pg = { k: "bank" };
+            if (typeof window.R === "function") window.R();
+          }),
+          H("IBAN & InstaPay|رقم IBAN وعنوان InstaPay"),
           F([
-            ["Bank Name (e.g. CIB, NBE, InstaPay)|اسم البنك (مثل CIB أو الأهلي أو InstaPay)", ""],
-            ["Account Number / IBAN / InstaPay|رقم الحساب أو IBAN أو عنوان InstaPay", ""]
-          ], "Add Bank Account to Vault|إضافة الحساب البنكي للخزنة", "Bank account saved|تم حفظ الحساب البنكي", function (vals) {
-            return reqd(vals, "Enter bank name and account/IBAN|أدخل اسم البنك ورقم الحساب أو IBAN");
-          }, function (vals) {
-            if (typeof S !== "undefined" && Array.isArray(S.items) && typeof window.mk === "function") {
-              S.items.unshift(window.mk("on", "private", "bank", "حساب بنكي · " + vals[0].trim(), vals[1].trim(), vals[0].trim()));
-              if (typeof sv === "function") sv();
+            ["IBAN (Optional)|رقم الحساب الدولي IBAN (اختياري)", (typeof S !== "undefined" && S.bk && S.bk.iban) || ""],
+            ["InstaPay Address (e.g. name@instapay)|عنوان InstaPay (مثل name@instapay)", (typeof S !== "undefined" && S.bk && S.bk.instapay) || ""]
+          ], "Save IBAN & InstaPay|حفظ IBAN و InstaPay", "IBAN & InstaPay saved|تم حفظ IBAN و InstaPay", null, function (vals) {
+            if (window.IDCBank && typeof window.IDCBank.saveIbanValues === "function") {
+              window.IDCBank.saveIbanValues(vals[0], vals[1]);
             }
             render();
           })
@@ -736,6 +760,20 @@
       window.pg = null;
       if (window.IDCPrivate) window.IDCPrivate.open();
       else if (typeof window.go === "function") window.go({ nav: "wallet", tab: "private" });
+    },
+    bk_open: function () {
+      window.pg = { k: "bank" };
+      if (typeof window.R === "function") window.R();
+    },
+    bk_add: function () {
+      window.pg = { k: "bank-add" };
+      if (typeof window.R === "function") window.R();
+    },
+    bk_clear: function () {
+      if (window.IDCBank && typeof window.IDCBank.clearAllCards === "function") {
+        window.IDCBank.clearAllCards(false);
+        render();
+      }
     }
   };
 
@@ -959,6 +997,43 @@
         moreB.textContent = B("Show more (" + (items.length - dLim) + ")|عرض المزيد (" + (items.length - dLim) + ")");
         moreB.onclick = function () { st.docsLimit = dLim + 20; render(); };
         w.appendChild(moreB);
+      }
+    } else if (b.k === "bk_cards") {
+      var cBk = card();
+      var bkCards = (window.IDCBank && typeof window.IDCBank.getCards === "function") ? window.IDCBank.getCards() : [];
+      if (!bkCards.length) {
+        cBk.innerHTML = '<div class="row"><span class="l v">' + B("No cards added yet — add your own bank or Telda card below.|لا توجد كروت مضافة حاليًا — أضف كارد البنك أو Telda الخاص بك بالأسفل.") + "</span></div>";
+      } else {
+        bkCards.forEach(function (bc, idx) {
+          var rBk = document.createElement("div");
+          rBk.className = "row";
+          rBk.innerHTML = '<span class="l"><b>' + esc(bc.bank || "Card") + "</b><span class=\"sub\" dir=\"ltr\">" + esc(bc.net || "") + " · •••• " + esc(bc.last4 || "0000") + " · " + esc(bc.exp || "") + "</span></span>";
+          var rmB = document.createElement("button");
+          rmB.className = "mini d";
+          rmB.textContent = B("Remove|إزالة");
+          rmB.onclick = function () {
+            if (window.IDCBank && typeof window.IDCBank.removeCardAt === "function") {
+              window.IDCBank.removeCardAt(idx, false);
+              render();
+            }
+          };
+          rBk.appendChild(rmB);
+          cBk.appendChild(rBk);
+        });
+      }
+      w.appendChild(cBk);
+      if (bkCards.length > 1) {
+        var clrAllB = document.createElement("button");
+        clrAllB.className = "cta danger";
+        clrAllB.style.marginBottom = "10px";
+        clrAllB.textContent = B("Clear all cards|مسح كل الكروت");
+        clrAllB.onclick = function () {
+          if (window.IDCBank && typeof window.IDCBank.clearAllCards === "function") {
+            window.IDCBank.clearAllCards(false);
+            render();
+          }
+        };
+        w.appendChild(clrAllB);
       }
     } else if (b.k === "steps") {
       var c5 = card();

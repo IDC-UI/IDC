@@ -110,6 +110,15 @@ check("S39 Hourly Temporary Share (#s=...) supports 4/7/24h + custom hours and C
   const untranslated = mustTranslate.filter((p) => /[\u0600-\u06FF]/.test(trFn(p)));
   check("S40 English mode translates all Home quick-actions, LinkedIn/Share controls, CV actions, and Lock/Auth labels with zero leftover Arabic", untranslated.length === 0 && /applyLang/.test(supa), untranslated.length ? "Untranslated: " + untranslated.join(", ") : "");
 }
+check("S41 Card Bank supports Egyptian banks & fintechs (NBE, Banque Misr, CIB, QNB, Telda, Klivvr, myFawry, InstaPay) with SVG logos, clear/remove controls, and Settings section",
+  /البنك الأهلي المصري/.test(bankSrc) &&
+  /بنك مصر/.test(bankSrc) &&
+  /Telda/i.test(bankSrc) &&
+  /Klivvr/i.test(bankSrc) &&
+  /myFawry/i.test(bankSrc) &&
+  /clearAllCards/.test(bankSrc) &&
+  /<svg/.test(bankSrc) &&
+  /id:\s*"banking"/.test(settingsSrc));
 
 /* ---------------------------------------------------------------- Edge-function helper (real TS, Deno stubbed) */
 globalThis.Deno = { env: { get: (k) => (k === "ALLOWED_ORIGINS" ? "https://app.example.github.io" : undefined) } };
@@ -412,6 +421,85 @@ let savedBody;
     check("T11b scope isolation (profile vs cv vs both) and 7h/24h/clamped durations work accurately", false, "IDCTempShare missing");
     check("T11c temporary share link expires automatically right after hours elapse", false, "IDCTempShare missing");
     check("T11d expired/corrupted #s=... link fails closed and renders expiry screen with zero leaked data", false, "IDCTempShare missing");
+  }
+}
+
+// T13: Card Bank empty real-user default, Egyptian banks & Telda SVG templates, IBAN/InstaPay edit, and remove/clear all
+{
+  const bForm = {};
+  const bCtx = {
+    console, Math, Date, Object, Array, String, Number, Boolean, RegExp, parseFloat, parseInt, isNaN,
+    setTimeout: () => 0, clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+    crypto: globalThis.crypto,
+    navigator: { clipboard: { writeText: async () => {} } },
+    confirm: () => true,
+    document: {
+      getElementById: (id) => (id === "bkAddErr" ? { textContent: "" } : null),
+      createElement: () => ({ style: {}, setAttribute: () => {}, querySelector: () => ({ onclick: null }), remove: () => {} }),
+      head: { appendChild: () => {} },
+      body: { appendChild: () => {} }
+    },
+    location: { hostname: "localhost" },
+    S: { lang: "ar", preview: 0, p: { n: "Maria Ibrahim" }, bk: null },
+    pg: { k: "bank" },
+    esc: (x) => String(x == null ? "" : x).replace(/[&<>"']/g, "_"),
+    mi: (n) => "[" + n + "]",
+    fld: (id, l) => '<input id="' + id + '">',
+    v: (id) => String(bForm[id] ?? "").trim(),
+    tst: () => {},
+    sv: () => {},
+    R: () => {},
+    page: () => "<div>base</div>"
+  };
+  bCtx.window = bCtx;
+  vm.createContext(bCtx);
+  vm.runInContext(read("idc-bank.js"), bCtx);
+
+  const initialHtml = bCtx.page();
+  check("T13a real user Card Bank starts empty with zero fake Nile Bank cards",
+    Boolean(bCtx.S.bk && Array.isArray(bCtx.S.bk.cards) && bCtx.S.bk.cards.length === 0 && !/Nile Bank/.test(initialHtml)));
+
+  const bkApi = bCtx.IDCBank;
+  const providers = bkApi && typeof bkApi.getProviders === "function" ? bkApi.getProviders() : [];
+  const hasKeyProviders = ["nbe", "bm", "cib", "qnb", "telda", "klivvr", "fawry", "instapay"].every((id) => providers.some((p) => p.id === id));
+
+  if (bkApi && hasKeyProviders) {
+    // Add NBE Meeza, Banque Misr Visa Gold, and Telda Mastercard
+    bCtx.pg = { k: "bank-add" };
+    Object.assign(bForm, { bkProvider: "nbe", bkType: "0", bkHolder: "MARIA IBRAHIM", bkNum: "5078 1234 5678 9100", bkExp: "09/29", bkOpen: "5000" });
+    bkApi.saveNewCard();
+    Object.assign(bForm, { bkProvider: "bm", bkType: "1", bkHolder: "MARIA IBRAHIM", bkNum: "4111 2222 3333 7788", bkExp: "11/28", bkOpen: "8000" });
+    bkApi.saveNewCard();
+    Object.assign(bForm, { bkProvider: "telda", bkType: "3", bkHolder: "MARIA IBRAHIM", bkNum: "5200 9999 8888 4455", bkExp: "06/30", bkOpen: "1500" });
+    bkApi.saveNewCard();
+
+    bCtx.pg = { k: "bank" };
+    const renderedCards = bCtx.page();
+    check("T13b adding NBE, Banque Misr, and Telda cards renders bank SVG logos + Meeza/VISA/Mastercard badges and keeps only last 4 digits",
+      bCtx.S.bk.cards.length === 3 &&
+      bCtx.S.bk.cards[0].last4 === "9100" &&
+      !/50781234/.test(JSON.stringify(bCtx.S.bk)) &&
+      /<svg/.test(renderedCards) &&
+      /البنك الأهلي المصري|NATIONAL BANK OF EGYPT/.test(renderedCards) &&
+      /بنك مصر|BANQUE MISR/.test(renderedCards) &&
+      /telda/i.test(renderedCards));
+
+    bkApi.saveIbanValues("EG99 0003 0004 0005 0006 0007 0008", "maria@instapay");
+    const afterIbanHtml = bCtx.page();
+    check("T13c IBAN and InstaPay address can be updated and rendered cleanly",
+      bCtx.S.bk.iban === "EG99 0003 0004 0005 0006 0007 0008" &&
+      bCtx.S.bk.instapay === "maria@instapay" &&
+      /maria@instapay/.test(afterIbanHtml));
+
+    bkApi.removeCardAt(1, true);
+    const lenAfterOneRemoved = bCtx.S.bk.cards.length;
+    bkApi.clearAllCards(true);
+    check("T13d individual card removal and clearAllCards wipe cards cleanly without errors",
+      lenAfterOneRemoved === 2 && bCtx.S.bk.cards.length === 0 && bCtx.S.bk.sel === 0);
+  } else {
+    check("T13b adding NBE, Banque Misr, and Telda cards renders bank SVG logos + Meeza/VISA/Mastercard badges and keeps only last 4 digits", false, "getProviders missing");
+    check("T13c IBAN and InstaPay address can be updated and rendered cleanly", false, "saveIbanValues missing");
+    check("T13d individual card removal and clearAllCards wipe cards cleanly without errors", false, "clearAllCards missing");
   }
 }
 
