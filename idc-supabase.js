@@ -640,7 +640,8 @@
     st.n = (st.n || 0) + 1;
     var wipedLocal = false;
     if (st.n >= 5) {
-      st.until = Date.now() + 30000 * Math.pow(2, Math.min(st.n - 5, 5));
+      st.until = Date.now() + 30000;
+      st.n = 0;
       wipeLocalDeviceOnly();
       wipedLocal = true;
     }
