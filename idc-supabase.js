@@ -538,19 +538,28 @@
     var vault = null;
 
     if (sourceRow) {
+      var decVault = async function (ctStr, saltStr, pwCandidate) {
+        vaultSalt = fromBase64Url(saltStr);
+        vaultKey = await window.IDCrypto.fromPass(pwCandidate, vaultSalt);
+        var vObj = await decryptVaultCiphertext(ctStr, vaultKey);
+        if (!isSafeVault(vObj)) throw new Error("Encrypted vault format is invalid");
+        return vObj;
+      };
       try {
-        vaultSalt = fromBase64Url(sourceRow.salt);
-        vaultKey = await window.IDCrypto.fromPass(password, vaultSalt);
-        vault = await decryptVaultCiphertext(sourceRow.ciphertext, vaultKey);
-        if (!isSafeVault(vault)) throw new Error("Encrypted vault format is invalid");
+        vault = await decVault(sourceRow.ciphertext, sourceRow.salt, password);
       } catch (decErr) {
-        if (remoteRow && localRow && sourceRow === remoteRow) {
-          vaultSalt = fromBase64Url(localRow.salt);
-          vaultKey = await window.IDCrypto.fromPass(password, vaultSalt);
-          vault = await decryptVaultCiphertext(localRow.ciphertext, vaultKey);
-          if (!isSafeVault(vault)) throw new Error("Encrypted vault format is invalid");
-        } else {
-          throw decErr;
+        var trimmedPw = String(password || "").trim();
+        if (trimmedPw && trimmedPw !== password) {
+          try {
+            vault = await decVault(sourceRow.ciphertext, sourceRow.salt, trimmedPw);
+          } catch (trimErr) {}
+        }
+        if (!vault) {
+          if (remoteRow && localRow && sourceRow === remoteRow) {
+            vault = await decVault(localRow.ciphertext, localRow.salt, trimmedPw || password);
+          } else {
+            throw decErr;
+          }
         }
       }
     } else {
@@ -863,6 +872,8 @@
       tst("افتح حسابك أولًا (بالبصمة أو كلمة المرور) لتغيير كلمة المرور.");
       return false;
     }
+    newPassword = String(newPassword || "").trim();
+    confirmPassword = String(confirmPassword || "").trim();
     var prob = passwordProblem(newPassword, currentUser.email || "");
     if (prob) {
       tst(prob);
@@ -879,6 +890,11 @@
     }
     vaultSalt = crypto.getRandomValues(new Uint8Array(16));
     vaultKey = await window.IDCrypto.fromPass(newPassword, vaultSalt);
+    try {
+      if (typeof indexedDB !== "undefined" && indexedDB.deleteDatabase) {
+        indexedDB.deleteDatabase("idc_outer_bio_v1");
+      }
+    } catch (e) {}
     await persistVault();
     tst(S.lang === "en" ? "Password updated & vault re-encrypted ✓" : "تم تحديث كلمة المرور وإعادة تشفير المحفظة بنجاح ✓");
     return true;
@@ -1289,11 +1305,11 @@
   };
 
   window.idcUnlockVault = function () {
-    return unlockWith(String(document.getElementById("unlockEmail").value || "").trim().toLowerCase(), document.getElementById("unlockPassword").value || "");
+    return unlockWith(String(document.getElementById("unlockEmail").value || "").trim().toLowerCase(), String(document.getElementById("unlockPassword").value || "").trim());
   };
 
   window.idcUnlockPrivate = function () {
-    return unlockWith(String(document.getElementById("privateEmail").value || "").trim().toLowerCase(), document.getElementById("privatePassword").value || "");
+    return unlockWith(String(document.getElementById("privateEmail").value || "").trim().toLowerCase(), String(document.getElementById("privatePassword").value || "").trim());
   };
 
   window.psave = async function () {

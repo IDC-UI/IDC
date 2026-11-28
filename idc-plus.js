@@ -1265,6 +1265,14 @@
     if (bi) bi.onclick = function () { dip.prompt(); dip.userChoice.then(function () { d.remove(); }); };
   }
   if ("serviceWorker" in navigator) {
+    var hadSw = Boolean(navigator.serviceWorker.controller);
+    var swRefreshed = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadSw && !swRefreshed && (!window.IDCUnlockVault || !window.IDCUnlockVault())) {
+        swRefreshed = true;
+        location.reload();
+      }
+    });
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
         try { reg.update(); } catch (e) {}

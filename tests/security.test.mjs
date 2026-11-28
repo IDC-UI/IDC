@@ -633,11 +633,44 @@ let savedBody;
     });
     rateLimited.form.fp = "htff7965@gmail.com";
     await rateLimited.ctx.doF1();
-    check("T14f 429 over_email_send_rate_limit detected via error.code/status, preserves typed email, and SW revalidates HTTP cache",
+    check("T14f 429 over_email_send_rate_limit detected via code/status, preserves typed email, and SW revalidates HTTP cache",
       /رسالتان في الساعة/.test(rateLimited.ctx.err) &&
       rateLimited.ctx.au.d.em === "htff7965@gmail.com" &&
       /updateViaCache:\s*"none"/.test(plusSrc) &&
       /cache:\s*'no-cache'/.test(sw));
+
+    // T14g: Mobile keyboard trailing space on Lock Screen (idcUnlockVault) or Settings (idcChangePasswordInApp) never causes vault mismatch after doF3
+    const trimTest = boot({ session: { user: USER }, remoteRow: rowWithItem });
+    await tick(25);
+    trimTest.form.unlockEmail = "maria@example.com";
+    trimTest.form.unlockPassword = "  even-newer-pass88  ";
+    // Save vault with trimmed password via idcChangePasswordInApp (with trailing spaces) on unlocked rec instance first
+    const chgTrimOk = await rec.ctx.idcChangePasswordInApp("  trimmed-pass-2026  ", "  trimmed-pass-2026  ");
+    const savedAfterTrimChange = rec.ctx.__saved;
+    const relogin = boot({ remoteRow: savedAfterTrimChange });
+    relogin.form.lg = "maria@example.com";
+    relogin.form.lp = "trimmed-pass-2026";
+    await relogin.ctx.doLogin();
+    const lockUnlock = boot({
+      session: { user: USER },
+      remoteRow: savedAfterTrimChange,
+      localStore: {}
+    });
+    await tick(25);
+    // Simulate mobile keyboard trailing space in raw input.value (not v()) on unlockPassword:
+    lockUnlock.ctx.document.getElementById = (id) => {
+      if (id === "app") return lockUnlock.app;
+      if (id === "unlockEmail") return { value: "maria@example.com " };
+      if (id === "unlockPassword") return { value: "trimmed-pass-2026 " };
+      return { value: "", checked: false, textContent: "" };
+    };
+    await lockUnlock.ctx.idcUnlockVault();
+    check("T14g trailing spaces in Settings password change or Lock Screen unlockPassword never break vault decryption, and SW controllerchange auto-refreshes auth screen",
+      chgTrimOk === true &&
+      relogin.ctx.S.screen === "home" &&
+      lockUnlock.ctx.err === "" &&
+      lockUnlock.ctx.S.screen === "home" &&
+      /controllerchange/.test(plusSrc));
   } else {
     check("T14b ciphertext stays 100% pure Base64URL for secure-vault Edge Function", false, "doVerifyResetOtp or recKey missing");
     check("T14c Email OTP + Recovery Key updates password and restores all encrypted vault items with zero data loss", false, "doVerifyResetOtp missing");
